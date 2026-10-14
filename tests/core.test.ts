@@ -101,6 +101,26 @@ test("Every original release draft has valid structure and a matching determinis
   await pool.query("INSERT INTO users(id,profile_id,username,password_hash,role) VALUES($1,$2,$3,$4,'editor')",[actor,actorProfile,"proof_"+actor.slice(0,8),hashPassword("proof test password")]);
   await assert.rejects(()=>transaction(db=>publishCandidate(db,candidate.id,actor,"Test rejects a proof that disagrees with the answer.",true)),(e:any)=>e.code==="EVIDENCE_REQUIRED");
 });
+test("Starter difficulty corrections preserve approved and edited drafts and invalidate stale reviews",async()=>{
+  const ids=[randomUUID(),randomUUID(),randomUUID()];
+  await transaction(async db=>{
+    const fixtures=[
+      [ids[0],"release-v1:logic:original-calculation:48*29","easy","review",1],
+      [ids[1],"release-v1:logic:original-calculation:19+26","medium","review",2],
+      [ids[2],"release-v1:logic:original-calculation:53+27","hard","approved",1],
+    ];
+    for(const [id,factKey,difficulty,status,revision] of fixtures) await db.query("INSERT INTO candidates(id,fact_key,normalized_hash,payload,status,revision) VALUES($1,$2,$6,$3,$4,$5)",[id,factKey,JSON.stringify({difficulty}),status,revision,String(id)]);
+    await db.query(await readFile(new URL("../migrations/014_release_draft_difficulty.sql",import.meta.url),"utf8"));
+    const result=await db.query("SELECT id,payload->>'difficulty' AS difficulty,revision FROM candidates WHERE id=ANY($1::uuid[])",[ids]);
+    const rows=new Map(result.rows.map(row=>[row.id,row]));
+    assert.equal(rows.get(ids[0]).difficulty,"hard");assert.equal(rows.get(ids[0]).revision,2);
+    assert.equal(rows.get(ids[1]).difficulty,"medium");assert.equal(rows.get(ids[1]).revision,2);
+    assert.equal(rows.get(ids[2]).difficulty,"hard");assert.equal(rows.get(ids[2]).revision,1);
+    assert.equal((await db.query("SELECT 1 FROM audit_logs WHERE target=ANY($1::text[]) AND action='correct-release-draft-difficulty'",[ids])).rowCount,1);
+    await db.query("DELETE FROM audit_logs WHERE target=ANY($1::text[])",[ids]);
+    await db.query("DELETE FROM candidates WHERE id=ANY($1::uuid[])",[ids]);
+  });
+});
 after(async () => {
   await pool.end();
 });

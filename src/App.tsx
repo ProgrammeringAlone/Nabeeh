@@ -2045,6 +2045,10 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
                   <strong>الإجابة:</strong> {c.payload.answer}
                 </p>
                 <p>{c.payload.explanation}</p>
+                <p className="muted">
+                  الصعوبة: {difficulties.find(([value])=>value===c.payload.difficulty)?.[1] || c.payload.difficulty}
+                  {" · "}النوع: {({text:"نص",choice:"اختيارات",ordering:"ترتيب",word:"كلمة",image:"صورة",audio:"صوت",video:"فيديو"} as Record<string,string>)[c.payload.format] || c.payload.format}
+                </p>
                 <code>{c.fact_key}</code>
                 {["review","duplicate"].includes(c.status) && <Button secondary disabled={busy} onClick={()=>{setDraftId(c.id);setDraftRevision(c.revision);setDraftJson(JSON.stringify(c.payload,null,2));window.scrollTo({top:0,behavior:"smooth"});}}>تعديل المسودة</Button>}
                 {c.payload.media && <figure className="question-media">

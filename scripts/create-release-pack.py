@@ -76,7 +76,9 @@ for i,(word,letters,clue) in enumerate([('بحر','ر ح ب','مسطح مائي 
  q['format']='word';questions.append(q)
 for i,(a,b) in enumerate([(23,17),(48,29),(19,26),(34,19),(53,27),(71,38)]):
  op='+' if i%2==0 else '*'; answer=a+b if op=='+' else a*b
- q=base('logic',i,f'كم يساوي {a} '+('زائد' if op=='+' else 'ضرب')+f' {b}؟',str(answer),f'{a}{op}{b}={answer}',f'original-calculation:{a}{op}{b}','calculate','قسّم المسألة إلى خطوات بسيطة.',f'{a} {op} {b} = {answer}.');questions.append(q)
+ q=base('logic',i,f'كم يساوي {a} '+('زائد' if op=='+' else 'ضرب')+f' {b}؟',str(answer),f'{a}{op}{b}={answer}',f'original-calculation:{a}{op}{b}','calculate','قسّم المسألة إلى خطوات بسيطة.',f'{a} {op} {b} = {answer}.')
+ q['difficulty']=['easy','hard','easy','medium','medium','hard'][i]
+ questions.append(q)
 pack=dict(version=1,categories=[dict(id=c[0],name=c[1],description=c[2],icon=c[3],color='#dce9e4') for c in categories],assets=assets,questions=questions)
 (root/'media'/'release-pack.json').write_text(json.dumps(pack,ensure_ascii=False,indent=2)+'\n')
 lines=['# حزمة نبيه الأولى للمراجعة','',f'{len(questions)} مسودة أصلية؛ لا توجد موافقة تحريرية تلقائية.','', '| # | الفئة | النوع | الصعوبة | السؤال | الإجابة |','|---|---|---|---|---|---|']

@@ -1076,7 +1076,7 @@
       "categoryIds": [
         "logic"
       ],
-      "difficulty": "easy",
+      "difficulty": "hard",
       "format": "text",
       "region": "all",
       "tags": [
@@ -1098,7 +1098,7 @@
       "categoryIds": [
         "logic"
       ],
-      "difficulty": "medium",
+      "difficulty": "easy",
       "format": "text",
       "region": "all",
       "tags": [
@@ -1142,7 +1142,7 @@
       "categoryIds": [
         "logic"
       ],
-      "difficulty": "hard",
+      "difficulty": "medium",
       "format": "text",
       "region": "all",
       "tags": [

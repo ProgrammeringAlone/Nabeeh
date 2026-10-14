@@ -22,7 +22,7 @@ Shared policy defaults to the host plus explicitly linked authenticated particip
 
 ## API contract
 
-`GET /api/me`, `POST /api/auth/register|login|logout|recover`, `POST /api/participants/token`, `GET /api/categories?q=&region=&difficulty=`, `POST /api/favorites`, `GET|POST /api/games`, `GET /api/games/:id`, `POST /api/games/:id/open|respond|reveal|score|lifeline|abandon`, `GET /api/games/:id/media/:instance`, `GET /api/account/export`, `DELETE /api/account`. Mutations require a same-origin request and `X-Nabeeh-Request: 1`. Zod rejects malformed requests. Errors have Arabic messages and stable codes.
+`GET /api/me`, `POST /api/auth/register|login|logout|recover`, `POST /api/participants/token`, `GET /api/categories?q=&region=&difficulty=`, `POST /api/favorites`, `GET|POST /api/games`, `GET /api/games/:id`, `POST /api/games/:id/open|response|reveal|score|lifeline|abandon`, `GET /api/games/:id/media/:instance`, `GET /api/account/export`, `DELETE /api/account`. Mutations require a same-origin request and `X-Nabeeh-Request: 1`. Zod rejects malformed requests. Errors have Arabic messages and stable codes.
 
 Admin APIs enforce the database role, expose candidate review/generation/import/export and audit metrics. Seed administration is provisioned via a CLI, never a public privilege toggle. Rate limits supplement authorization, not replace it. Cookies are HTTP-only, same-site lax, secure in production. Passwords use scrypt + per-password salts. Session tokens are random and only SHA256 digests persist. Production requires HTTPS, proxy topology configuration, external DB backups and secret management.
 
