@@ -1,0 +1,1178 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "id": "visual",
+      "name": "عينك على التفاصيل",
+      "description": "تحدّيات بصرية أصلية، من الأشكال إلى الأنماط.",
+      "icon": "◇",
+      "color": "#dce9e4"
+    },
+    {
+      "id": "rhythm",
+      "name": "اسمع وعدّ",
+      "description": "إشارات صوتية أصلية مع بديل نصّي.",
+      "icon": "♫",
+      "color": "#dce9e4"
+    },
+    {
+      "id": "motion",
+      "name": "لاحظ الحركة",
+      "description": "مقاطع قصيرة أصلية تختبر الانتباه.",
+      "icon": "▷",
+      "color": "#dce9e4"
+    },
+    {
+      "id": "ordering",
+      "name": "رتّبها",
+      "description": "بطاقات وأرقام تحتاج ترتيبًا واضحًا.",
+      "icon": "↕",
+      "color": "#dce9e4"
+    },
+    {
+      "id": "word",
+      "name": "حروف مبعثرة",
+      "description": "تحدّيات كلمات عربية أصلية.",
+      "icon": "ب",
+      "color": "#dce9e4"
+    }
+  ],
+  "assets": [
+    {
+      "id": "6b31f6f3-fd0a-5ad4-b6b4-f156f79a875a",
+      "mime": "image/svg+xml",
+      "objectKey": "6b31f6f3-fd0a-5ad4-b6b4-f156f79a875a.svg",
+      "sizeBytes": 291,
+      "sha256": "62d92e2ed807038c54d360138794cdeab15b63033a2bb6caaeca58fa1c9b431c",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "0baba0d0-528b-543a-94c2-69f64298d837",
+      "mime": "image/svg+xml",
+      "objectKey": "0baba0d0-528b-543a-94c2-69f64298d837.svg",
+      "sizeBytes": 482,
+      "sha256": "d6653b2b8cb09eeb645bf94f143494f3889c62f32115f451999b8d64d327eb3e",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "3a92ae1b-c993-5e11-95c2-b9be93247066",
+      "mime": "image/svg+xml",
+      "objectKey": "3a92ae1b-c993-5e11-95c2-b9be93247066.svg",
+      "sizeBytes": 484,
+      "sha256": "363120a2e90c24b8df39b3efd7772eafef6ae21f8102a4086b891f9a4f39788f",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "d2683c39-31c1-57e0-ad6b-ca7d626d82e5",
+      "mime": "image/svg+xml",
+      "objectKey": "d2683c39-31c1-57e0-ad6b-ca7d626d82e5.svg",
+      "sizeBytes": 753,
+      "sha256": "f1fec6335117dcb0a42d374a54014d7223c1f6b364e59157c23f54001aac2134",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "687fb50a-5f6a-5cb6-944e-5a54cfc7750d",
+      "mime": "image/svg+xml",
+      "objectKey": "687fb50a-5f6a-5cb6-944e-5a54cfc7750d.svg",
+      "sizeBytes": 679,
+      "sha256": "a8c08c73de1f57bbcb69c8de58ef108bf339e931e39dc80b28058a41be2bc2f5",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "aea84a25-329c-5332-86e1-81eea5228e1a",
+      "mime": "image/svg+xml",
+      "objectKey": "aea84a25-329c-5332-86e1-81eea5228e1a.svg",
+      "sizeBytes": 1024,
+      "sha256": "e64d5d8873b61b56d100d80ed57661f85b7ae47c29f80234efd979716bd3c33e",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "5a300803-f15a-5625-826d-6a2293e4c680",
+      "mime": "audio/wav",
+      "objectKey": "5a300803-f15a-5625-826d-6a2293e4c680.wav",
+      "sizeBytes": 48044,
+      "sha256": "4d5e90559fd9f9b55db7747c85cde1056f3848958b4077691cec8c0fb0240554",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "4288435a-15c9-5fae-acba-1ad653f51ae2",
+      "mime": "audio/wav",
+      "objectKey": "4288435a-15c9-5fae-acba-1ad653f51ae2.wav",
+      "sizeBytes": 64044,
+      "sha256": "29b6e84a715bc55b5fa64efc6cca13b1f7e8b296ea94a8857fdfd8b6887c923f",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "f19faca1-6705-557f-adb9-07a11d5845cc",
+      "mime": "audio/wav",
+      "objectKey": "f19faca1-6705-557f-adb9-07a11d5845cc.wav",
+      "sizeBytes": 80044,
+      "sha256": "595c887e47bc12f99b45029e669e75283c1296228a4b5cfd0994425207b2e855",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "ec38219e-14bc-5839-9063-bcade60551cc",
+      "mime": "audio/wav",
+      "objectKey": "ec38219e-14bc-5839-9063-bcade60551cc.wav",
+      "sizeBytes": 96044,
+      "sha256": "69bb27d1ba600325168260ee21cf9c140a5af6ff541adf94be850ef96f11f769",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "7208ff9b-bb01-5d8c-981b-e70b96147561",
+      "mime": "audio/wav",
+      "objectKey": "7208ff9b-bb01-5d8c-981b-e70b96147561.wav",
+      "sizeBytes": 112044,
+      "sha256": "0ad1f6d33fc593444e6ab860312802364d678d9bf3e1704fff54d78cd07f6ae9",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "9a1b2d41-32f4-5214-83df-1be7f8c6af2f",
+      "mime": "audio/wav",
+      "objectKey": "9a1b2d41-32f4-5214-83df-1be7f8c6af2f.wav",
+      "sizeBytes": 128044,
+      "sha256": "7c8b2a55d9519739d4fbb218af3344eefb518355bdd54db28f3db35af56d75a8",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "004582f2-7074-588a-936b-fa4a8f43e7cb",
+      "mime": "video/mp4",
+      "objectKey": "004582f2-7074-588a-936b-fa4a8f43e7cb.mp4",
+      "sizeBytes": 3670,
+      "sha256": "d5a44d85be79ce72e77dcd7038904ad928168df1419ec1eadb049c56483b2bdc",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "7ec08733-4ebe-5d0d-8ee5-178a1c281662",
+      "mime": "video/mp4",
+      "objectKey": "7ec08733-4ebe-5d0d-8ee5-178a1c281662.mp4",
+      "sizeBytes": 4392,
+      "sha256": "31a52c275bd81f6ccde68e96dced0330f37e2cc3962383390d09b1e0e8d41eec",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "468811f4-e110-52f1-bd12-1e365b643ba1",
+      "mime": "video/mp4",
+      "objectKey": "468811f4-e110-52f1-bd12-1e365b643ba1.mp4",
+      "sizeBytes": 5180,
+      "sha256": "ff02fc1da585a6d89d59aedac10f48408022cd68727f02039e2522a942a02df3",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "122b2946-6daa-5bbc-ae74-efffebd6981e",
+      "mime": "video/mp4",
+      "objectKey": "122b2946-6daa-5bbc-ae74-efffebd6981e.mp4",
+      "sizeBytes": 5899,
+      "sha256": "6ff578fbe5e30fa3492c31e15afc25e42c841a155631ac166475e10fb469460f",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "9dc8d181-b323-5f2a-92d3-108c4821ce17",
+      "mime": "video/mp4",
+      "objectKey": "9dc8d181-b323-5f2a-92d3-108c4821ce17.mp4",
+      "sizeBytes": 6693,
+      "sha256": "b7b43a9a5d47ceef5e0615485f75ee9e960c07cc44b4a89c4d3ba595519770e4",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    },
+    {
+      "id": "ecdea4a5-8e3f-5a51-a8bb-b864ad06d8d9",
+      "mime": "video/mp4",
+      "objectKey": "ecdea4a5-8e3f-5a51-a8bb-b864ad06d8d9.mp4",
+      "sizeBytes": 7403,
+      "sha256": "3449345354d008f6a9025515b94a6436994dd6ee56bfe6ae4de3e47668c537a7",
+      "credit": "Nabeeh original procedural artwork and recordings",
+      "license": "Nabeeh first-party content; platform use only. All rights reserved.",
+      "source": "https://github.com/ProgrammeringAlone/Nabeeh/blob/nabeeh-launch/media/README.md"
+    }
+  ],
+  "questions": [
+    {
+      "text": "كم عدد الدوائر الخضراء في هذه اللوحة؟",
+      "answer": "3",
+      "explanation": "تحتوي اللوحة الأصلية على 3 أشكال من النوع المطلوب.",
+      "hint": "عدّ صفًا واحدًا ثم انتقل إلى التالي.",
+      "factKey": "release-v1:visual:original-grid:circle:3",
+      "subject": "original-grid:circle:3",
+      "predicate": "count-shapes",
+      "fact": "3+0=3",
+      "categoryIds": [
+        "visual"
+      ],
+      "difficulty": "easy",
+      "format": "image",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "6b31f6f3-fd0a-5ad4-b6b4-f156f79a875a",
+        "alt": "لوحة من أشكال هندسية موزّعة على صفوف.",
+        "transcript": "الأشكال في صفوف: ● ● ●"
+      }
+    },
+    {
+      "text": "كم عدد المربعات الذهبية في هذه اللوحة؟",
+      "answer": "5",
+      "explanation": "تحتوي اللوحة الأصلية على 5 أشكال من النوع المطلوب.",
+      "hint": "عدّ صفًا واحدًا ثم انتقل إلى التالي.",
+      "factKey": "release-v1:visual:original-grid:rect:5",
+      "subject": "original-grid:rect:5",
+      "predicate": "count-shapes",
+      "fact": "5+0=5",
+      "categoryIds": [
+        "visual"
+      ],
+      "difficulty": "easy",
+      "format": "image",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "0baba0d0-528b-543a-94c2-69f64298d837",
+        "alt": "لوحة من أشكال هندسية موزّعة على صفوف.",
+        "transcript": "الأشكال في صفوف: ■ ■ ■ ■ ■"
+      }
+    },
+    {
+      "text": "كم عدد الدوائر الخضراء في هذه اللوحة؟",
+      "answer": "7",
+      "explanation": "تحتوي اللوحة الأصلية على 7 أشكال من النوع المطلوب.",
+      "hint": "عدّ صفًا واحدًا ثم انتقل إلى التالي.",
+      "factKey": "release-v1:visual:original-grid:circle:7",
+      "subject": "original-grid:circle:7",
+      "predicate": "count-shapes",
+      "fact": "7+0=7",
+      "categoryIds": [
+        "visual"
+      ],
+      "difficulty": "medium",
+      "format": "image",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "3a92ae1b-c993-5e11-95c2-b9be93247066",
+        "alt": "لوحة من أشكال هندسية موزّعة على صفوف.",
+        "transcript": "الأشكال في صفوف: ● ● ● ● ● / ● ●"
+      }
+    },
+    {
+      "text": "كم عدد المربعات الذهبية في هذه اللوحة؟",
+      "answer": "9",
+      "explanation": "تحتوي اللوحة الأصلية على 9 أشكال من النوع المطلوب.",
+      "hint": "عدّ صفًا واحدًا ثم انتقل إلى التالي.",
+      "factKey": "release-v1:visual:original-grid:rect:9",
+      "subject": "original-grid:rect:9",
+      "predicate": "count-shapes",
+      "fact": "9+0=9",
+      "categoryIds": [
+        "visual"
+      ],
+      "difficulty": "medium",
+      "format": "image",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "d2683c39-31c1-57e0-ad6b-ca7d626d82e5",
+        "alt": "لوحة من أشكال هندسية موزّعة على صفوف.",
+        "transcript": "الأشكال في صفوف: ■ ■ ■ ■ ■ / ■ ■ ■ ■"
+      }
+    },
+    {
+      "text": "كم عدد الدوائر الخضراء في هذه اللوحة؟",
+      "answer": "11",
+      "explanation": "تحتوي اللوحة الأصلية على 11 أشكال من النوع المطلوب.",
+      "hint": "عدّ صفًا واحدًا ثم انتقل إلى التالي.",
+      "factKey": "release-v1:visual:original-grid:circle:11",
+      "subject": "original-grid:circle:11",
+      "predicate": "count-shapes",
+      "fact": "11+0=11",
+      "categoryIds": [
+        "visual"
+      ],
+      "difficulty": "hard",
+      "format": "image",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "687fb50a-5f6a-5cb6-944e-5a54cfc7750d",
+        "alt": "لوحة من أشكال هندسية موزّعة على صفوف.",
+        "transcript": "الأشكال في صفوف: ● ● ● ● ● / ● ● ● ● ● / ●"
+      }
+    },
+    {
+      "text": "كم عدد المربعات الذهبية في هذه اللوحة؟",
+      "answer": "13",
+      "explanation": "تحتوي اللوحة الأصلية على 13 أشكال من النوع المطلوب.",
+      "hint": "عدّ صفًا واحدًا ثم انتقل إلى التالي.",
+      "factKey": "release-v1:visual:original-grid:rect:13",
+      "subject": "original-grid:rect:13",
+      "predicate": "count-shapes",
+      "fact": "13+0=13",
+      "categoryIds": [
+        "visual"
+      ],
+      "difficulty": "hard",
+      "format": "image",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "aea84a25-329c-5332-86e1-81eea5228e1a",
+        "alt": "لوحة من أشكال هندسية موزّعة على صفوف.",
+        "transcript": "الأشكال في صفوف: ■ ■ ■ ■ ■ / ■ ■ ■ ■ ■ / ■ ■ ■"
+      }
+    },
+    {
+      "text": "استمع إلى الإشارة: كم نغمة قصيرة تسمع؟",
+      "answer": "2",
+      "explanation": "تتكرّر النغمة القصيرة 2 مرات، وبينها فواصل صامتة.",
+      "hint": "يمكنك إعادة تشغيل المقطع.",
+      "factKey": "release-v1:rhythm:original-tone-sequence:2",
+      "subject": "original-tone-sequence:2",
+      "predicate": "count-tones",
+      "fact": "2+0=2",
+      "categoryIds": [
+        "rhythm"
+      ],
+      "difficulty": "easy",
+      "format": "audio",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "5a300803-f15a-5625-826d-6a2293e4c680",
+        "alt": "مقطع من نغمات قصيرة متباعدة.",
+        "transcript": "طن طن"
+      }
+    },
+    {
+      "text": "استمع إلى الإشارة: كم نغمة قصيرة تسمع؟",
+      "answer": "3",
+      "explanation": "تتكرّر النغمة القصيرة 3 مرات، وبينها فواصل صامتة.",
+      "hint": "يمكنك إعادة تشغيل المقطع.",
+      "factKey": "release-v1:rhythm:original-tone-sequence:3",
+      "subject": "original-tone-sequence:3",
+      "predicate": "count-tones",
+      "fact": "3+0=3",
+      "categoryIds": [
+        "rhythm"
+      ],
+      "difficulty": "easy",
+      "format": "audio",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "4288435a-15c9-5fae-acba-1ad653f51ae2",
+        "alt": "مقطع من نغمات قصيرة متباعدة.",
+        "transcript": "طن طن طن"
+      }
+    },
+    {
+      "text": "استمع إلى الإشارة: كم نغمة قصيرة تسمع؟",
+      "answer": "4",
+      "explanation": "تتكرّر النغمة القصيرة 4 مرات، وبينها فواصل صامتة.",
+      "hint": "يمكنك إعادة تشغيل المقطع.",
+      "factKey": "release-v1:rhythm:original-tone-sequence:4",
+      "subject": "original-tone-sequence:4",
+      "predicate": "count-tones",
+      "fact": "4+0=4",
+      "categoryIds": [
+        "rhythm"
+      ],
+      "difficulty": "medium",
+      "format": "audio",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "f19faca1-6705-557f-adb9-07a11d5845cc",
+        "alt": "مقطع من نغمات قصيرة متباعدة.",
+        "transcript": "طن طن طن طن"
+      }
+    },
+    {
+      "text": "استمع إلى الإشارة: كم نغمة قصيرة تسمع؟",
+      "answer": "5",
+      "explanation": "تتكرّر النغمة القصيرة 5 مرات، وبينها فواصل صامتة.",
+      "hint": "يمكنك إعادة تشغيل المقطع.",
+      "factKey": "release-v1:rhythm:original-tone-sequence:5",
+      "subject": "original-tone-sequence:5",
+      "predicate": "count-tones",
+      "fact": "5+0=5",
+      "categoryIds": [
+        "rhythm"
+      ],
+      "difficulty": "medium",
+      "format": "audio",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "ec38219e-14bc-5839-9063-bcade60551cc",
+        "alt": "مقطع من نغمات قصيرة متباعدة.",
+        "transcript": "طن طن طن طن طن"
+      }
+    },
+    {
+      "text": "استمع إلى الإشارة: كم نغمة قصيرة تسمع؟",
+      "answer": "6",
+      "explanation": "تتكرّر النغمة القصيرة 6 مرات، وبينها فواصل صامتة.",
+      "hint": "يمكنك إعادة تشغيل المقطع.",
+      "factKey": "release-v1:rhythm:original-tone-sequence:6",
+      "subject": "original-tone-sequence:6",
+      "predicate": "count-tones",
+      "fact": "6+0=6",
+      "categoryIds": [
+        "rhythm"
+      ],
+      "difficulty": "hard",
+      "format": "audio",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "7208ff9b-bb01-5d8c-981b-e70b96147561",
+        "alt": "مقطع من نغمات قصيرة متباعدة.",
+        "transcript": "طن طن طن طن طن طن"
+      }
+    },
+    {
+      "text": "استمع إلى الإشارة: كم نغمة قصيرة تسمع؟",
+      "answer": "7",
+      "explanation": "تتكرّر النغمة القصيرة 7 مرات، وبينها فواصل صامتة.",
+      "hint": "يمكنك إعادة تشغيل المقطع.",
+      "factKey": "release-v1:rhythm:original-tone-sequence:7",
+      "subject": "original-tone-sequence:7",
+      "predicate": "count-tones",
+      "fact": "7+0=7",
+      "categoryIds": [
+        "rhythm"
+      ],
+      "difficulty": "hard",
+      "format": "audio",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "9a1b2d41-32f4-5214-83df-1be7f8c6af2f",
+        "alt": "مقطع من نغمات قصيرة متباعدة.",
+        "transcript": "طن طن طن طن طن طن طن"
+      }
+    },
+    {
+      "text": "شاهد المقطع: كم مرة يظهر المربع الأخضر ثم يختفي؟",
+      "answer": "2",
+      "explanation": "يظهر المربع الأخضر ويختفي 2 مرات في هذا المقطع الأصلي.",
+      "hint": "لاحظ كل ظهور جديد للمربع.",
+      "factKey": "release-v1:motion:original-flash-sequence:2",
+      "subject": "original-flash-sequence:2",
+      "predicate": "count-flashes",
+      "fact": "2+0=2",
+      "categoryIds": [
+        "motion"
+      ],
+      "difficulty": "easy",
+      "format": "video",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "004582f2-7074-588a-936b-fa4a8f43e7cb",
+        "alt": "مربع أخضر يظهر على خلفية فاتحة ثم يختفي.",
+        "transcript": "■ ثم فراغ → ■ ثم فراغ"
+      }
+    },
+    {
+      "text": "شاهد المقطع: كم مرة يظهر المربع الأخضر ثم يختفي؟",
+      "answer": "3",
+      "explanation": "يظهر المربع الأخضر ويختفي 3 مرات في هذا المقطع الأصلي.",
+      "hint": "لاحظ كل ظهور جديد للمربع.",
+      "factKey": "release-v1:motion:original-flash-sequence:3",
+      "subject": "original-flash-sequence:3",
+      "predicate": "count-flashes",
+      "fact": "3+0=3",
+      "categoryIds": [
+        "motion"
+      ],
+      "difficulty": "easy",
+      "format": "video",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "7ec08733-4ebe-5d0d-8ee5-178a1c281662",
+        "alt": "مربع أخضر يظهر على خلفية فاتحة ثم يختفي.",
+        "transcript": "■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ"
+      }
+    },
+    {
+      "text": "شاهد المقطع: كم مرة يظهر المربع الأخضر ثم يختفي؟",
+      "answer": "4",
+      "explanation": "يظهر المربع الأخضر ويختفي 4 مرات في هذا المقطع الأصلي.",
+      "hint": "لاحظ كل ظهور جديد للمربع.",
+      "factKey": "release-v1:motion:original-flash-sequence:4",
+      "subject": "original-flash-sequence:4",
+      "predicate": "count-flashes",
+      "fact": "4+0=4",
+      "categoryIds": [
+        "motion"
+      ],
+      "difficulty": "medium",
+      "format": "video",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "468811f4-e110-52f1-bd12-1e365b643ba1",
+        "alt": "مربع أخضر يظهر على خلفية فاتحة ثم يختفي.",
+        "transcript": "■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ"
+      }
+    },
+    {
+      "text": "شاهد المقطع: كم مرة يظهر المربع الأخضر ثم يختفي؟",
+      "answer": "5",
+      "explanation": "يظهر المربع الأخضر ويختفي 5 مرات في هذا المقطع الأصلي.",
+      "hint": "لاحظ كل ظهور جديد للمربع.",
+      "factKey": "release-v1:motion:original-flash-sequence:5",
+      "subject": "original-flash-sequence:5",
+      "predicate": "count-flashes",
+      "fact": "5+0=5",
+      "categoryIds": [
+        "motion"
+      ],
+      "difficulty": "medium",
+      "format": "video",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "122b2946-6daa-5bbc-ae74-efffebd6981e",
+        "alt": "مربع أخضر يظهر على خلفية فاتحة ثم يختفي.",
+        "transcript": "■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ"
+      }
+    },
+    {
+      "text": "شاهد المقطع: كم مرة يظهر المربع الأخضر ثم يختفي؟",
+      "answer": "6",
+      "explanation": "يظهر المربع الأخضر ويختفي 6 مرات في هذا المقطع الأصلي.",
+      "hint": "لاحظ كل ظهور جديد للمربع.",
+      "factKey": "release-v1:motion:original-flash-sequence:6",
+      "subject": "original-flash-sequence:6",
+      "predicate": "count-flashes",
+      "fact": "6+0=6",
+      "categoryIds": [
+        "motion"
+      ],
+      "difficulty": "hard",
+      "format": "video",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "9dc8d181-b323-5f2a-92d3-108c4821ce17",
+        "alt": "مربع أخضر يظهر على خلفية فاتحة ثم يختفي.",
+        "transcript": "■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ"
+      }
+    },
+    {
+      "text": "شاهد المقطع: كم مرة يظهر المربع الأخضر ثم يختفي؟",
+      "answer": "7",
+      "explanation": "يظهر المربع الأخضر ويختفي 7 مرات في هذا المقطع الأصلي.",
+      "hint": "لاحظ كل ظهور جديد للمربع.",
+      "factKey": "release-v1:motion:original-flash-sequence:7",
+      "subject": "original-flash-sequence:7",
+      "predicate": "count-flashes",
+      "fact": "7+0=7",
+      "categoryIds": [
+        "motion"
+      ],
+      "difficulty": "hard",
+      "format": "video",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "media": {
+        "assetId": "ecdea4a5-8e3f-5a51-a8bb-b864ad06d8d9",
+        "alt": "مربع أخضر يظهر على خلفية فاتحة ثم يختفي.",
+        "transcript": "■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ → ■ ثم فراغ"
+      }
+    },
+    {
+      "text": "رتّب الأعداد من الأصغر إلى الأكبر.",
+      "answer": "3، 8، 12",
+      "explanation": "الترتيب الصحيح هو: 3، 8، 12.",
+      "hint": "قارن قيمة كل عدد بالأعداد الأخرى.",
+      "factKey": "release-v1:ordering:12,3,8",
+      "subject": "12,3,8",
+      "predicate": "ascending",
+      "fact": "ascending:12,3,8=3,8,12",
+      "categoryIds": [
+        "ordering"
+      ],
+      "difficulty": "easy",
+      "format": "ordering",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "options": [
+        "12",
+        "3",
+        "8"
+      ],
+      "orderingAnswer": [
+        "3",
+        "8",
+        "12"
+      ]
+    },
+    {
+      "text": "رتّب الأعداد من الأكبر إلى الأصغر.",
+      "answer": "31، 18، 7",
+      "explanation": "الترتيب الصحيح هو: 31، 18، 7.",
+      "hint": "قارن قيمة كل عدد بالأعداد الأخرى.",
+      "factKey": "release-v1:ordering:31,7,18",
+      "subject": "31,7,18",
+      "predicate": "descending",
+      "fact": "descending:31,7,18=31,18,7",
+      "categoryIds": [
+        "ordering"
+      ],
+      "difficulty": "easy",
+      "format": "ordering",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "options": [
+        "31",
+        "7",
+        "18"
+      ],
+      "orderingAnswer": [
+        "31",
+        "18",
+        "7"
+      ]
+    },
+    {
+      "text": "رتّب الأعداد من الأصغر إلى الأكبر.",
+      "answer": "9، 22، 45، 64",
+      "explanation": "الترتيب الصحيح هو: 9، 22، 45، 64.",
+      "hint": "قارن قيمة كل عدد بالأعداد الأخرى.",
+      "factKey": "release-v1:ordering:64,22,45,9",
+      "subject": "64,22,45,9",
+      "predicate": "ascending",
+      "fact": "ascending:64,22,45,9=9,22,45,64",
+      "categoryIds": [
+        "ordering"
+      ],
+      "difficulty": "medium",
+      "format": "ordering",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "options": [
+        "64",
+        "22",
+        "45",
+        "9"
+      ],
+      "orderingAnswer": [
+        "9",
+        "22",
+        "45",
+        "64"
+      ]
+    },
+    {
+      "text": "رتّب الأعداد من الأكبر إلى الأصغر.",
+      "answer": "95، 70، 41، 13",
+      "explanation": "الترتيب الصحيح هو: 95، 70، 41، 13.",
+      "hint": "قارن قيمة كل عدد بالأعداد الأخرى.",
+      "factKey": "release-v1:ordering:95,41,13,70",
+      "subject": "95,41,13,70",
+      "predicate": "descending",
+      "fact": "descending:95,41,13,70=95,70,41,13",
+      "categoryIds": [
+        "ordering"
+      ],
+      "difficulty": "medium",
+      "format": "ordering",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "options": [
+        "95",
+        "41",
+        "13",
+        "70"
+      ],
+      "orderingAnswer": [
+        "95",
+        "70",
+        "41",
+        "13"
+      ]
+    },
+    {
+      "text": "رتّب الأعداد من الأصغر إلى الأكبر.",
+      "answer": "24، 57، 76، 93، 108",
+      "explanation": "الترتيب الصحيح هو: 24، 57، 76، 93، 108.",
+      "hint": "قارن قيمة كل عدد بالأعداد الأخرى.",
+      "factKey": "release-v1:ordering:108,57,93,24,76",
+      "subject": "108,57,93,24,76",
+      "predicate": "ascending",
+      "fact": "ascending:108,57,93,24,76=24,57,76,93,108",
+      "categoryIds": [
+        "ordering"
+      ],
+      "difficulty": "hard",
+      "format": "ordering",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "options": [
+        "108",
+        "57",
+        "93",
+        "24",
+        "76"
+      ],
+      "orderingAnswer": [
+        "24",
+        "57",
+        "76",
+        "93",
+        "108"
+      ]
+    },
+    {
+      "text": "رتّب الأعداد من الأكبر إلى الأصغر.",
+      "answer": "315، 204، 129، 82، 46",
+      "explanation": "الترتيب الصحيح هو: 315، 204، 129، 82، 46.",
+      "hint": "قارن قيمة كل عدد بالأعداد الأخرى.",
+      "factKey": "release-v1:ordering:315,82,204,129,46",
+      "subject": "315,82,204,129,46",
+      "predicate": "descending",
+      "fact": "descending:315,82,204,129,46=315,204,129,82,46",
+      "categoryIds": [
+        "ordering"
+      ],
+      "difficulty": "hard",
+      "format": "ordering",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved.",
+      "options": [
+        "315",
+        "82",
+        "204",
+        "129",
+        "46"
+      ],
+      "orderingAnswer": [
+        "315",
+        "204",
+        "129",
+        "82",
+        "46"
+      ]
+    },
+    {
+      "text": "رتّب الحروف لتكوّن كلمة تدل على مسطح مائي واسع: ر ح ب",
+      "answer": "بحر",
+      "explanation": "بتجميع الحروف نحصل على «بحر»، وهي تدل على مسطح مائي واسع.",
+      "hint": "استخدم كل حرف مرة واحدة.",
+      "factKey": "release-v1:word:word-puzzle:بحر",
+      "subject": "word-puzzle:بحر",
+      "predicate": "assemble-word",
+      "fact": "anagram:ر ح ب=بحر",
+      "categoryIds": [
+        "word"
+      ],
+      "difficulty": "easy",
+      "format": "word",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    },
+    {
+      "text": "رتّب الحروف لتكوّن كلمة تدل على أداة للكتابة: م ق ل",
+      "answer": "قلم",
+      "explanation": "بتجميع الحروف نحصل على «قلم»، وهي تدل على أداة للكتابة.",
+      "hint": "استخدم كل حرف مرة واحدة.",
+      "factKey": "release-v1:word:word-puzzle:قلم",
+      "subject": "word-puzzle:قلم",
+      "predicate": "assemble-word",
+      "fact": "anagram:م ق ل=قلم",
+      "categoryIds": [
+        "word"
+      ],
+      "difficulty": "easy",
+      "format": "word",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    },
+    {
+      "text": "رتّب الحروف لتكوّن كلمة تدل على مكان لحفظ الكتب وقراءتها: ت م ة ك ب",
+      "answer": "مكتبة",
+      "explanation": "بتجميع الحروف نحصل على «مكتبة»، وهي تدل على مكان لحفظ الكتب وقراءتها.",
+      "hint": "استخدم كل حرف مرة واحدة.",
+      "factKey": "release-v1:word:word-puzzle:مكتبة",
+      "subject": "word-puzzle:مكتبة",
+      "predicate": "assemble-word",
+      "fact": "anagram:ت م ة ك ب=مكتبة",
+      "categoryIds": [
+        "word"
+      ],
+      "difficulty": "medium",
+      "format": "word",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    },
+    {
+      "text": "رتّب الحروف لتكوّن كلمة تدل على مكان أخضر للتنزّه: ق ح ة ي د",
+      "answer": "حديقة",
+      "explanation": "بتجميع الحروف نحصل على «حديقة»، وهي تدل على مكان أخضر للتنزّه.",
+      "hint": "استخدم كل حرف مرة واحدة.",
+      "factKey": "release-v1:word:word-puzzle:حديقة",
+      "subject": "word-puzzle:حديقة",
+      "predicate": "assemble-word",
+      "fact": "anagram:ق ح ة ي د=حديقة",
+      "categoryIds": [
+        "word"
+      ],
+      "difficulty": "medium",
+      "format": "word",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    },
+    {
+      "text": "رتّب الحروف لتكوّن كلمة تدل على أداة لفتح القفل: ت م ا ح ف",
+      "answer": "مفتاح",
+      "explanation": "بتجميع الحروف نحصل على «مفتاح»، وهي تدل على أداة لفتح القفل.",
+      "hint": "استخدم كل حرف مرة واحدة.",
+      "factKey": "release-v1:word:word-puzzle:مفتاح",
+      "subject": "word-puzzle:مفتاح",
+      "predicate": "assemble-word",
+      "fact": "anagram:ت م ا ح ف=مفتاح",
+      "categoryIds": [
+        "word"
+      ],
+      "difficulty": "hard",
+      "format": "word",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    },
+    {
+      "text": "رتّب الحروف لتكوّن كلمة تدل على وسيلة نقل تحلّق في الجو: ئ ط ة ا ر",
+      "answer": "طائرة",
+      "explanation": "بتجميع الحروف نحصل على «طائرة»، وهي تدل على وسيلة نقل تحلّق في الجو.",
+      "hint": "استخدم كل حرف مرة واحدة.",
+      "factKey": "release-v1:word:word-puzzle:طائرة",
+      "subject": "word-puzzle:طائرة",
+      "predicate": "assemble-word",
+      "fact": "anagram:ئ ط ة ا ر=طائرة",
+      "categoryIds": [
+        "word"
+      ],
+      "difficulty": "hard",
+      "format": "word",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    },
+    {
+      "text": "كم يساوي 23 زائد 17؟",
+      "answer": "40",
+      "explanation": "23 + 17 = 40.",
+      "hint": "قسّم المسألة إلى خطوات بسيطة.",
+      "factKey": "release-v1:logic:original-calculation:23+17",
+      "subject": "original-calculation:23+17",
+      "predicate": "calculate",
+      "fact": "23+17=40",
+      "categoryIds": [
+        "logic"
+      ],
+      "difficulty": "easy",
+      "format": "text",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    },
+    {
+      "text": "كم يساوي 48 ضرب 29؟",
+      "answer": "1392",
+      "explanation": "48 * 29 = 1392.",
+      "hint": "قسّم المسألة إلى خطوات بسيطة.",
+      "factKey": "release-v1:logic:original-calculation:48*29",
+      "subject": "original-calculation:48*29",
+      "predicate": "calculate",
+      "fact": "48*29=1392",
+      "categoryIds": [
+        "logic"
+      ],
+      "difficulty": "easy",
+      "format": "text",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    },
+    {
+      "text": "كم يساوي 19 زائد 26؟",
+      "answer": "45",
+      "explanation": "19 + 26 = 45.",
+      "hint": "قسّم المسألة إلى خطوات بسيطة.",
+      "factKey": "release-v1:logic:original-calculation:19+26",
+      "subject": "original-calculation:19+26",
+      "predicate": "calculate",
+      "fact": "19+26=45",
+      "categoryIds": [
+        "logic"
+      ],
+      "difficulty": "medium",
+      "format": "text",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    },
+    {
+      "text": "كم يساوي 34 ضرب 19؟",
+      "answer": "646",
+      "explanation": "34 * 19 = 646.",
+      "hint": "قسّم المسألة إلى خطوات بسيطة.",
+      "factKey": "release-v1:logic:original-calculation:34*19",
+      "subject": "original-calculation:34*19",
+      "predicate": "calculate",
+      "fact": "34*19=646",
+      "categoryIds": [
+        "logic"
+      ],
+      "difficulty": "medium",
+      "format": "text",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    },
+    {
+      "text": "كم يساوي 53 زائد 27؟",
+      "answer": "80",
+      "explanation": "53 + 27 = 80.",
+      "hint": "قسّم المسألة إلى خطوات بسيطة.",
+      "factKey": "release-v1:logic:original-calculation:53+27",
+      "subject": "original-calculation:53+27",
+      "predicate": "calculate",
+      "fact": "53+27=80",
+      "categoryIds": [
+        "logic"
+      ],
+      "difficulty": "hard",
+      "format": "text",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    },
+    {
+      "text": "كم يساوي 71 ضرب 38؟",
+      "answer": "2698",
+      "explanation": "71 * 38 = 2698.",
+      "hint": "قسّم المسألة إلى خطوات بسيطة.",
+      "factKey": "release-v1:logic:original-calculation:71*38",
+      "subject": "original-calculation:71*38",
+      "predicate": "calculate",
+      "fact": "71*38=2698",
+      "categoryIds": [
+        "logic"
+      ],
+      "difficulty": "hard",
+      "format": "text",
+      "region": "all",
+      "tags": [
+        "أصلي",
+        "عائلي"
+      ],
+      "deterministic": true,
+      "provenance": "Original Nabeeh release pack v1. Human review required; not auto-approved."
+    }
+  ]
+}

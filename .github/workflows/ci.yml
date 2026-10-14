@@ -1,0 +1,58 @@
+name: Verify Nabeeh
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: nabeeh
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      redis:
+        image: redis:8-alpine
+        ports: ["6379:6379"]
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/nabeeh
+      REDIS_URL: redis://127.0.0.1:6379
+      GENERATION_DAILY_BUDGET_CENTS: "0"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - run: npm run db:migrate
+      - run: npm run build
+      - run: npm test
+      - run: npx playwright install --with-deps chromium
+      - name: Browser checks in an isolated database
+        run: |
+          export CHROMIUM_PATH="$(node -e 'console.log(require("playwright").chromium.executablePath())')"
+          npm run test:e2e
+      - run: npm run test:scaling
+      - run: npm run test:game-load
+      - run: npm audit --omit=dev --audit-level=high
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: browser-checks
+          path: |
+            test-results
+            playwright-report
+          retention-days: 7

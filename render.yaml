@@ -1,0 +1,30 @@
+# Free pilot. Database connection is entered securely during Blueprint setup.
+services:
+  - type: web
+    name: nabeeh
+    runtime: docker
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    autoDeployTrigger: commit
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: DATABASE_SSL_REQUIRED
+        value: "true"
+      - key: DB_POOL_MAX
+        value: "5"
+      - key: DB_STATEMENT_TIMEOUT_MS
+        value: "15000"
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: RUN_WORKER
+        value: "true"
+      - key: REQUIRE_SHARED_LIMITS
+        value: "false"
+      - key: MODEL_BASE_URL
+        value: https://api.openai.com/v1
+      - key: GENERATION_DAILY_BUDGET_CENTS
+        value: "0"
