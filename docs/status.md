@@ -1,6 +1,6 @@
 # Delivery status — 2026-10-14
 
-Nabeeh is deployed at [nabeeh-web.onrender.com](https://nabeeh-web.onrender.com) using the free Render + Neon pilot. Hosted HTTPS, database APIs, secure sessions, account recovery and three responsive viewports passed smoke checks. The owner has accessed the editor, which showed all 36 release drafts pending review. Hosted gameplay remains to be validated after human question approvals.
+Nabeeh is deployed at [nabeeh-web.onrender.com](https://nabeeh-web.onrender.com) using the free Render + Neon pilot. Hosted HTTPS, database APIs, secure sessions, account recovery and three responsive viewports passed smoke checks. The owner has accessed the editor, which showed all 36 release drafts pending review. Question approval is underway. Hosted classic and rapid word games passed with six distinct questions, refresh, scoring retries and cross-browser resume; the temporary test account was deleted.
 
 ## Implemented
 
@@ -21,7 +21,7 @@ The finite pack contains 36 original drafts: six each image, audio, video, order
 | --- | --- | --- |
 | Locked installation, migrations, draft preparation and TypeScript/Vite build | Passed | Existing local checkout/database |
 | PostgreSQL integration suite | 28 passed, no failures/skips | Isolated real database |
-| Chromium browser suite | 18 passed | Desktop 1440×1000, tablet 820×1180, mobile 390×844 |
+| Chromium browser suite | 21 passed | Desktop 1440×1000, tablet 820×1180, mobile 390×844 |
 | Browser gameplay/content/accessibility | Complete games, reload, accounts/recovery, editor edit/approve/access, six formats and protected media; no axe violations in tested screens | Automated checks plus screenshot inspection, not a complete human accessibility audit |
 | Concurrent game workload | 30 players, 60 completed games, 900 requests, 0 failures; p50 16 ms, p95 37 ms | Local isolated DB, concurrency 10; no hosted capacity guarantee |
 | Shared rate limits | Two separate app processes shared one real Redis quota; fourth request blocked after three allowed | Local Redis |
@@ -29,7 +29,7 @@ The finite pack contains 36 original drafts: six each image, audio, video, order
 | Backup restoration | Consistent real PostgreSQL snapshot restored with matching records and exposure digest | Isolated local destination |
 | Runtime dependency audit | 0 reported vulnerabilities | Check time; not a security certification |
 | Production Docker runtime | Fresh schema, 36 pending drafts/18 media assets, compiled RTL frontend, secure sessions and nonroot process | Local container |
-| Hosted deployment smoke | HTTPS/database/API healthy, secure cookies, registration/recovery/login/export/deletion passed; no failed resources or page errors at three viewports | Temporary test account deleted; hosted games await editorial approval |
+| Hosted deployment smoke | HTTPS/database/API healthy, secure cookies, registration/recovery/login/export/deletion passed; no failed resources or page errors at three viewports | Temporary test accounts deleted; hosted word games passed, media gameplay awaits those packs being approved |
 
 Research covers rendered public pages at all six supplied origins, with desktop/mobile captures and public navigation. Your explicit platform-CA authorization resolved the browser trust block. Login, checkout, live scoring persistence and paid flows remain untested where unavailable without an account/payment; see research.md. No proprietary question bank was imported.
 
@@ -38,7 +38,7 @@ Research covers rendered public pages at all six supplied origins, with desktop/
 1. Completed: the branch is deployed on Free Render with a Neon database binding.
 2. Completed: the owner created an account, saved a private recovery key and accessed the editor. Remove the temporary ADMIN_USERNAME deployment setting after provisioning.
 3. Review and approve individual release drafts; verify any additional factual content with exact citations. Approval never clears exposure history.
-4. Public URL, HTTPS/cookies and editor access passed; validate complete hosted games, refresh and second-browser game resume after approval.
+4. Public URL, HTTPS/cookies, editor access, complete hosted classic/rapid word games, refresh and second-browser game resume passed. Validate hosted image/audio/video gameplay after approving those packs.
 5. Before broad launch, decide support contact, terms/retention, monitoring and backup policy. Enable shared Redis before multiple replicas and measure real hosted capacity before selecting paid scale bounds.
 
 Live model/embedding/judge calls and external S3 remain unvalidated without secure provider bindings. The free deployment has no model key and a zero AI budget. Payments, tournaments and email/OIDC are future work. Universal semantic paraphrase detection cannot be guaranteed by lexical checks or a model; consistent canonical facts and human review remain essential.
@@ -46,3 +46,5 @@ Live model/embedding/judge calls and external S3 remain unvalidated without secu
 The cloud installation/startup configuration is saved separately for environment review. Saving a draft does not publish it or prove a fresh-task restoration.
 
 Migration 014 corrects only untouched pending starter arithmetic drafts, retaining their IDs, status and answers and incrementing review revisions. Approved or already edited drafts retain their editorial decisions. Difficulty is an editorial judgment; the corrected pack retains two questions per level per category for a small pilot.
+
+Category availability now counts unseen and unreserved questions at each difficulty. Mixed setup and the homepage demonstration require a fresh question at every required level; incomplete categories are excluded from default/random selection. Browser checks cover partial publication and a pool whose remaining questions lack an easy level. Atomic server selection remains authoritative for concurrent/shared-participant changes.

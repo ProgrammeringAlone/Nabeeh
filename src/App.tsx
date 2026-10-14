@@ -51,6 +51,10 @@ type Me = {
   role: string;
   seen: number;
 };
+function categoryHasEnoughQuestions(c: Category, rounds = 1, difficulty = "mixed") {
+  return c.available >= rounds * 3 &&
+    (difficulty !== "mixed" || [c.easy, c.medium, c.hard].every(count => count >= rounds));
+}
 type Game = {
   id: string;
   status: string;
@@ -435,7 +439,7 @@ function Home({ run, busy }: Context) {
   }, []);
   const demo = () =>
     run(async () => {
-      const c = categories.find((c) => c.available >= 3);
+      const c = categories.find((c) => categoryHasEnoughQuestions(c));
       if (!c) throw new Error("لا توجد أسئلة جديدة كافية للتجربة.");
       const { id } = await api("/games", {
         categoryIds: [c.id],
@@ -965,8 +969,8 @@ function Setup({ run, busy }: Context) {
       .then(rows=>{
         if(!active)return;setCategories(rows);
         setSelected(previous=>{
-          const valid=previous.filter(id=>rows.some(c=>c.id===id && c.available>=rounds*3));
-          return valid.length?valid:rows.filter(c=>c.available>=rounds*3).slice(0,3).map(c=>c.id);
+          const valid=previous.filter(id=>rows.some(c=>c.id===id && categoryHasEnoughQuestions(c,rounds,difficulty)));
+          return valid.length?valid:rows.filter(c=>categoryHasEnoughQuestions(c,rounds,difficulty)).slice(0,3).map(c=>c.id);
         });
       })
       .catch(() => {});
@@ -983,6 +987,8 @@ function Setup({ run, busy }: Context) {
   const start = () =>
     run(async () => {
       if (!selected.length) throw new Error("اختر فئة واحدة على الأقل.");
+      if (selected.some(id=>!categories.some(c=>c.id===id && categoryHasEnoughQuestions(c,rounds,difficulty))))
+        throw new Error("اختر فئة تتوفر فيها أسئلة كافية للمستوى المحدد.");
       const { id } = await api("/games", {
         categoryIds: selected,
         mode,
@@ -1080,7 +1086,7 @@ function Setup({ run, busy }: Context) {
                 className="text-button"
                 onClick={() => {
                   const ids = categories
-                    .filter((c) => c.available >= rounds * 3)
+                    .filter((c) => categoryHasEnoughQuestions(c,rounds,difficulty))
                     .map((c) => c.id);
                   for (let i = ids.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -1129,7 +1135,7 @@ function Setup({ run, busy }: Context) {
                   aria-pressed={selected.includes(c.id)}
                   onClick={() => toggle(c.id)}
                   disabled={
-                    c.available < rounds * 3 && !selected.includes(c.id)
+                    !categoryHasEnoughQuestions(c,rounds,difficulty) && !selected.includes(c.id)
                   }
                 >
                   <span style={{ background: c.color }}>
@@ -1137,6 +1143,7 @@ function Setup({ run, busy }: Context) {
                   </span>
                   <strong>{c.name}</strong>
                   <small>{c.available} سؤال جديد</small>
+                  {c.available > 0 && !categoryHasEnoughQuestions(c,rounds,difficulty) && <small>بانتظار أسئلة بالمستويات المطلوبة</small>}
                   {selected.includes(c.id) && (
                     <Check className="selection-check" size={17} />
                   )}
@@ -1262,7 +1269,7 @@ function Setup({ run, busy }: Context) {
           </div>
           <Button
             onClick={start}
-            disabled={busy || !selected.length || names.some((n) => !n.trim())}
+            disabled={busy || !selected.length || names.some((n) => !n.trim()) || selected.some(id=>!categories.some(c=>c.id===id && categoryHasEnoughQuestions(c,rounds,difficulty)))}
           >
             ابدأ اللعبة <ArrowLeft size={18} />
           </Button>
