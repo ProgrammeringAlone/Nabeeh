@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { limiter } from "./limits.ts";
-import {wakeWorker} from "./worker.ts";
+import { wakeWorker } from "./worker.ts";
 import { z } from "zod";
 import { randomBytes, randomUUID } from "node:crypto";
 import { pool, transaction, AppError } from "./db.ts";
@@ -15,7 +15,11 @@ import {
   cookieToken,
   updateRole,
 } from "./auth.ts";
-import { issueRecoveryKey, rotateRecoveryKey, recoverAccount } from "./recovery.ts";
+import {
+  issueRecoveryKey,
+  rotateRecoveryKey,
+  recoverAccount,
+} from "./recovery.ts";
 import {
   createGame,
   gameState,
@@ -26,7 +30,21 @@ import {
   respond,
   abandon,
 } from "./game.ts";
-import { serveGameMedia, serveEditorMedia, mediaBody, uploadMedia } from "./media.ts";
+import {
+  serveGameMedia,
+  serveEditorMedia,
+  mediaBody,
+  uploadMedia,
+  listEditorMedia,
+} from "./media.ts";
+import { submitQuestion } from "./submissions.ts";
+import { getEditorialSuggestions } from "./editorial-suggestions.ts";
+import {
+  readLeaderboard,
+  getLeaderboardPreference,
+  setLeaderboardPreference,
+} from "./leaderboard.ts";
+import { integerSetting } from "./config.ts";
 import {
   candidateSchema,
   ingest,
@@ -39,9 +57,42 @@ export const api = Router();
 api.use(identity);
 api.use(limiter("profile"));
 api.get("/games/:id/media/:instanceId", serveGameMedia);
-api.post("/games/:id/response", async (req,res) => res.json(await respond(z.uuid().parse(req.params.id),req.identity.profileId,req.body)));
+api.post("/games/:id/response", async (req, res) =>
+  res.json(
+    await respond(
+      z.uuid().parse(req.params.id),
+      req.identity.profileId,
+      req.body,
+    ),
+  ),
+);
 api.post("/admin/media", requireEditor, mediaBody, uploadMedia);
-api.get("/admin/media/:assetId",requireEditor,serveEditorMedia);
+api.get("/admin/media", requireEditor, async (req, res) =>
+  res.json(
+    await listEditorMedia(
+      z.enum(["image", "audio", "video"]).optional().parse(req.query.format),
+      z.string().optional().parse(req.query.cursor),
+      z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(100)
+        .default(50)
+        .parse(req.query.limit),
+    ),
+  ),
+);
+api.get("/admin/media/:assetId", requireEditor, serveEditorMedia);
+api.get("/leaderboard", async (req, res) =>
+  res.json(await readLeaderboard(req.query)),
+);
+api.get("/account/leaderboard", async (req, res) =>
+  res.json(await getLeaderboardPreference(req.identity.profileId)),
+);
+api.post("/account/leaderboard", async (req, res) => {
+  const b = z.object({ enabled: z.boolean() }).strict().parse(req.body);
+  res.json(await setLeaderboardPreference(req.identity.profileId, b.enabled));
+});
 const credentials = z
   .object({
     username: z
@@ -92,7 +143,7 @@ api.post("/auth/login", async (req, res) => {
   const {
     rows: [u],
   } = await pool.query("SELECT * FROM users WHERE username=$1", [c.username]);
-  if (!u || !await checkPasswordAsync(c.password, u.password_hash))
+  if (!u || !(await checkPasswordAsync(c.password, u.password_hash)))
     throw new AppError(
       401,
       "LOGIN_FAILED",
@@ -108,14 +159,26 @@ api.post("/auth/login", async (req, res) => {
   res.json({ ok: true });
 });
 api.post("/auth/recover", async (req, res) => {
-  const b = credentials.extend({ recoveryKey: z.string().min(48).max(80) }).parse(req.body);
-  const recoveryKey = await recoverAccount(b.username, b.recoveryKey, b.password);
+  const b = credentials
+    .extend({ recoveryKey: z.string().min(48).max(80) })
+    .parse(req.body);
+  const recoveryKey = await recoverAccount(
+    b.username,
+    b.recoveryKey,
+    b.password,
+  );
   res.json({ ok: true, recoveryKey });
 });
 api.post("/auth/recovery-key", async (req, res) => {
-  if (!req.identity.userId) throw new AppError(401, "ACCOUNT_REQUIRED", "سجّل الدخول أولًا.");
-  const b = z.object({ password: z.string().min(1).max(128) }).strict().parse(req.body);
-  res.json({ recoveryKey: await rotateRecoveryKey(req.identity.userId, b.password) });
+  if (!req.identity.userId)
+    throw new AppError(401, "ACCOUNT_REQUIRED", "سجّل الدخول أولًا.");
+  const b = z
+    .object({ password: z.string().min(1).max(128) })
+    .strict()
+    .parse(req.body);
+  res.json({
+    recoveryKey: await rotateRecoveryKey(req.identity.userId, b.password),
+  });
 });
 api.post("/auth/logout", async (req, res) => {
   const token = cookieToken(req);
@@ -261,18 +324,26 @@ api.post("/reports", async (req, res) => {
   res.json({ ok: true });
 });
 api.get("/account/export", async (req, res) => {
-  const [exposures, games, favorites] = await Promise.all([
-    pool.query(
-      "SELECT question_id,category_id,shown_at,answer_revealed,outcome,completed FROM exposures WHERE profile_id=$1",
-      [req.identity.profileId],
-    ),
-    pool.query("SELECT id,status,created_at FROM games WHERE host_id=$1", [
-      req.identity.profileId,
-    ]),
-    pool.query("SELECT category_id FROM favorites WHERE profile_id=$1", [
-      req.identity.profileId,
-    ]),
-  ]);
+  const [exposures, games, favorites, participation, preferences] =
+    await Promise.all([
+      pool.query(
+        "SELECT question_id,category_id,shown_at,answer_revealed,outcome,completed FROM exposures WHERE profile_id=$1",
+        [req.identity.profileId],
+      ),
+      pool.query("SELECT id,status,created_at FROM games WHERE host_id=$1", [
+        req.identity.profileId,
+      ]),
+      pool.query("SELECT category_id FROM favorites WHERE profile_id=$1", [
+        req.identity.profileId,
+      ]),
+      pool.query(
+        "SELECT game_id,team_index FROM game_participants WHERE profile_id=$1",
+        [req.identity.profileId],
+      ),
+      pool.query("SELECT leaderboard_enabled FROM users WHERE profile_id=$1", [
+        req.identity.profileId,
+      ]),
+    ]);
   res.setHeader(
     "Content-Disposition",
     'attachment; filename="nabeeh-data.json"',
@@ -282,6 +353,8 @@ api.get("/account/export", async (req, res) => {
     exposures: exposures.rows,
     games: games.rows,
     favorites: favorites.rows,
+    participation: participation.rows,
+    leaderboardEnabled: preferences.rows[0]?.leaderboard_enabled ?? false,
   });
 });
 api.delete("/account", async (req, res) => {
@@ -298,7 +371,7 @@ api.delete("/account", async (req, res) => {
     } = await pool.query("SELECT password_hash FROM users WHERE id=$1", [
       req.identity.userId,
     ]);
-    if (!b.password || !await checkPasswordAsync(b.password, u.password_hash))
+    if (!b.password || !(await checkPasswordAsync(b.password, u.password_hash)))
       throw new AppError(
         401,
         "PASSWORD_REQUIRED",
@@ -351,9 +424,60 @@ api.delete("/account", async (req, res) => {
   res.json({ ok: true });
 });
 api.use("/admin", requireEditor);
+api.post("/admin/submissions", async (req, res) =>
+  res.status(201).json(await submitQuestion(req.body, req.identity.userId!)),
+);
+api.get("/admin/suggestions", async (_req, res) =>
+  res.json(await getEditorialSuggestions()),
+);
+api.get("/admin/review-queue", async (req, res) => {
+  const filter = z
+    .object({
+      status: z
+        .enum(["review", "duplicate", "approved", "rejected"])
+        .default("review"),
+      page: z.coerce.number().int().min(1).max(10000).default(1),
+      categoryId: z.string().max(80).default(""),
+      difficulty: z.enum(["", "easy", "medium", "hard", "expert"]).default(""),
+    })
+    .parse(req.query);
+  const params = [filter.status, filter.categoryId, filter.difficulty];
+  const where =
+    "c.status=$1 AND ($2='' OR c.payload->'categoryIds' ? $2) AND ($3='' OR c.payload->>'difficulty'=$3)";
+  const [items, total, counts] = await Promise.all([
+    pool.query(
+      `SELECT c.*,COALESCE((SELECT json_agg(json_build_object('id',q.id,'text',q.text,'answer',q.answer,'score',d.score)) FROM duplicate_candidates d JOIN questions q ON q.id=d.question_id WHERE d.candidate_id=c.id),'[]') AS duplicates FROM candidates c WHERE ${where} ORDER BY c.created_at DESC,c.id LIMIT 12 OFFSET $4`,
+      [...params, (filter.page - 1) * 12],
+    ),
+    pool.query(
+      `SELECT count(*)::int AS count FROM candidates c WHERE ${where}`,
+      params,
+    ),
+    pool.query(
+      "SELECT status,count(*)::int AS count FROM candidates GROUP BY status",
+    ),
+  ]);
+  res.json({
+    items: items.rows,
+    page: filter.page,
+    total: total.rows[0].count,
+    totalPages: Math.ceil(total.rows[0].count / 12),
+    counts: {
+      review: 0,
+      duplicate: 0,
+      approved: 0,
+      rejected: 0,
+      ...Object.fromEntries(counts.rows.map((c) => [c.status, c.count])),
+    },
+  });
+});
 api.get("/admin/access", async (req, res) => {
   if (req.identity.role !== "admin")
-    throw new AppError(403, "ADMIN_REQUIRED", "إدارة الوصول للمدير فقط.");
+    throw new AppError(
+      403,
+      "ADMIN_REQUIRED",
+      "تعديل صلاحيات المستخدمين متاح للمدير فقط.",
+    );
   const { rows } = await pool.query(
     "SELECT id,username,role,created_at FROM users ORDER BY created_at DESC LIMIT 100",
   );
@@ -421,33 +545,80 @@ api.get("/admin/overview", async (_req, res) => {
     ]);
   res.json({
     questions: questions.rows,
+    candidateCounts: Object.fromEntries(
+      (
+        await pool.query(
+          "SELECT status,count(*)::int AS count FROM candidates GROUP BY status",
+        )
+      ).rows.map((c) => [c.status, c.count]),
+    ),
     candidates: candidates.rows,
     jobs: jobs.rows,
     reports: reports.rows,
     audit: audit.rows,
     inventory: inventory.rows,
-    replenishment: (await pool.query("SELECT r.*,c.name FROM replenishment_requests r JOIN categories c ON c.id=r.category_id WHERE resolved_at IS NULL ORDER BY requested_at DESC LIMIT 100")).rows,
+    replenishment: (
+      await pool.query(
+        "SELECT r.*,c.name FROM replenishment_requests r JOIN categories c ON c.id=r.category_id WHERE resolved_at IS NULL ORDER BY requested_at DESC LIMIT 100",
+      )
+    ).rows,
   });
 });
 api.post("/admin/candidates", async (req, res) => {
   res.status(201).json(await ingest(req.body));
 });
-api.post("/admin/candidates/:id/edit",async(req,res)=>{
-  const id=z.uuid().parse(req.params.id),b=z.object({candidate:candidateSchema,reason:z.string().min(12).max(2000),expectedRevision:z.number().int().min(1)}).strict().parse(req.body);
-  const result=await transaction(async db=>{
-    const {rows:[prior]}=await db.query("SELECT payload,status,revision FROM candidates WHERE id=$1 FOR UPDATE",[id]);
-    if(!prior || !["review","duplicate"].includes(prior.status)) throw new AppError(409,"NOT_REVIEWABLE","المسودة غير متاحة للتعديل.");
-    if(prior.revision!==b.expectedRevision) throw new AppError(409,"REVIEW_CHANGED","تغيّرت المسودة. حدّث القائمة قبل التعديل.");
-    const next=await ingestWith(db,b.candidate,id);
-    await db.query("INSERT INTO audit_logs(actor_id,action,target,metadata) VALUES($1,'edit-candidate',$2,$3)",[req.identity.userId,id,{reason:b.reason,priorPayload:prior.payload}]);
+api.post("/admin/candidates/:id/edit", async (req, res) => {
+  const id = z.uuid().parse(req.params.id),
+    b = z
+      .object({
+        candidate: candidateSchema,
+        reason: z.string().min(12).max(2000),
+        expectedRevision: z.number().int().min(1),
+      })
+      .strict()
+      .parse(req.body);
+  const result = await transaction(async (db) => {
+    const {
+      rows: [prior],
+    } = await db.query(
+      "SELECT payload,status,revision FROM candidates WHERE id=$1 FOR UPDATE",
+      [id],
+    );
+    if (!prior || !["review", "duplicate"].includes(prior.status))
+      throw new AppError(409, "NOT_REVIEWABLE", "المسودة غير متاحة للتعديل.");
+    if (prior.revision !== b.expectedRevision)
+      throw new AppError(
+        409,
+        "REVIEW_CHANGED",
+        "تغيّرت المسودة. حدّث القائمة قبل التعديل.",
+      );
+    const next = await ingestWith(db, b.candidate, id);
+    await db.query(
+      "INSERT INTO audit_logs(actor_id,action,target,metadata) VALUES($1,'edit-candidate',$2,$3)",
+      [
+        req.identity.userId,
+        id,
+        { reason: b.reason, priorPayload: prior.payload },
+      ],
+    );
     return next;
   });
   res.json(result);
 });
-api.post("/admin/replenishment/resolve",async(req,res)=>{
-  const b=z.object({categoryId:z.string().max(80),difficulty:z.string().max(30),region:z.string().max(10)}).strict().parse(req.body);
-  await pool.query("UPDATE replenishment_requests SET resolved_at=now() WHERE category_id=$1 AND difficulty=$2 AND region=$3",[b.categoryId,b.difficulty,b.region]);
-  res.json({ok:true});
+api.post("/admin/replenishment/resolve", async (req, res) => {
+  const b = z
+    .object({
+      categoryId: z.string().max(80),
+      difficulty: z.string().max(30),
+      region: z.string().max(10),
+    })
+    .strict()
+    .parse(req.body);
+  await pool.query(
+    "UPDATE replenishment_requests SET resolved_at=now() WHERE category_id=$1 AND difficulty=$2 AND region=$3",
+    [b.categoryId, b.difficulty, b.region],
+  );
+  res.json({ ok: true });
 });
 api.post("/admin/import", async (req, res) => {
   const list = z.array(candidateSchema).min(1).max(100).parse(req.body);
@@ -468,14 +639,72 @@ api.post("/admin/candidates/:id/review", async (req, res) => {
         action: z.enum(["approve", "reject"]),
         verificationNote: z.string().trim().min(12).max(2000),
         duplicateReviewed: z.boolean().default(false),
-        expectedRevision:z.number().int().min(1),
+        expectedRevision: z.number().int().min(1),
+        difficulty: z.enum(["easy", "medium", "hard", "expert"]).optional(),
+        categoryIds: z
+          .array(z.string().min(1).max(80))
+          .min(1)
+          .max(5)
+          .optional(),
       })
       .strict()
       .parse(req.body);
   await transaction(async (db) => {
-    const {rows:[current]}=await db.query("SELECT revision,status FROM candidates WHERE id=$1 FOR UPDATE",[id]);
-    if(!current || current.status!=="review") throw new AppError(409,"NOT_REVIEWABLE","المسودة غير متاحة للمراجعة.");
-    if(current.revision!==b.expectedRevision) throw new AppError(409,"REVIEW_CHANGED","تغيّرت المسودة. حدّث القائمة وأعد المراجعة.");
+    const {
+      rows: [current],
+    } = await db.query(
+      "SELECT revision,status,payload FROM candidates WHERE id=$1 FOR UPDATE",
+      [id],
+    );
+    if (
+      !current ||
+      !["review", "duplicate"].includes(current.status) ||
+      (b.action === "approve" && current.status !== "review")
+    )
+      throw new AppError(
+        409,
+        "NOT_REVIEWABLE",
+        "المسودة غير متاحة لهذا القرار.",
+      );
+    if (current.revision !== b.expectedRevision)
+      throw new AppError(
+        409,
+        "REVIEW_CHANGED",
+        "تغيّرت المسودة. حدّث القائمة وأعد المراجعة.",
+      );
+    const classified = candidateSchema.parse({
+      ...current.payload,
+      difficulty: b.difficulty ?? current.payload.difficulty,
+      categoryIds: b.categoryIds ?? current.payload.categoryIds,
+    });
+    let revision = current.revision;
+    if (
+      classified.difficulty !== current.payload.difficulty ||
+      JSON.stringify(classified.categoryIds) !==
+        JSON.stringify(current.payload.categoryIds)
+    ) {
+      const edited = await ingestWith(db, classified, id);
+      if (b.action === "approve" && edited.status !== "review")
+        throw new AppError(
+          409,
+          "DUPLICATE",
+          "السؤال يكرر محتوى موجودًا؛ عدّل المسودة أو ارفضها.",
+        );
+      revision++;
+      await db.query(
+        "INSERT INTO audit_logs(actor_id,action,target,metadata) VALUES($1,'classify-candidate',$2,$3)",
+        [
+          req.identity.userId,
+          id,
+          {
+            priorDifficulty: current.payload.difficulty,
+            difficulty: classified.difficulty,
+            priorCategoryIds: current.payload.categoryIds,
+            categoryIds: classified.categoryIds,
+          },
+        ],
+      );
+    }
     if (b.action === "approve")
       await publishCandidate(
         db,
@@ -483,11 +712,11 @@ api.post("/admin/candidates/:id/review", async (req, res) => {
         req.identity.userId!,
         b.verificationNote,
         b.duplicateReviewed,
-        b.expectedRevision,
+        revision,
       );
     else {
       await db.query(
-        "UPDATE candidates SET status='rejected',reason=$2 WHERE id=$1 AND status='review'",
+        "UPDATE candidates SET status='rejected',reason=$2,verification_note=$2 WHERE id=$1 AND status IN('review','duplicate')",
         [id, b.verificationNote],
       );
       await db.query(
@@ -594,7 +823,12 @@ api.post("/admin/questions/:id/edit", async (req, res) => {
         "تغيير الحقيقة يتطلّب مرشّحًا مستقلًّا. تعديل الصياغة يحفظ هوية السؤال.",
       );
     const { contentDigest } = await import("./content.ts");
-    const hash = await contentDigest(db,{text:b.text,format:q.format,options:q.options,...(q.media_id?{media:{assetId:q.media_id}}:{})});
+    const hash = await contentDigest(db, {
+      text: b.text,
+      format: q.format,
+      options: q.options,
+      ...(q.media_id ? { media: { assetId: q.media_id } } : {}),
+    });
     if (
       (
         await db.query(
@@ -635,19 +869,56 @@ api.post("/admin/jobs", async (req, res) => {
       categoryId: z.string().max(80),
       kind: z.enum(["arithmetic", "model"]),
       count: z.number().int().min(1).max(20),
+      difficulty: z.enum(["easy", "medium", "hard", "expert"]).optional(),
+      format: z.enum(["text", "choice", "ordering", "word"]).default("text"),
+      region: z
+        .enum(["all", "sa", "kw", "ae", "bh", "qa", "om"])
+        .default("all"),
     })
     .strict()
     .parse(req.body);
-  if (b.kind === "arithmetic" && b.categoryId !== "logic")
+  if (
+    b.kind === "arithmetic" &&
+    (b.categoryId !== "logic" || b.format !== "text")
+  )
     throw new AppError(
       400,
       "CATEGORY_MISMATCH",
       "التوليد الحسابي متاح لفئة الألغاز فقط.",
     );
-  await pool.query(
-    "INSERT INTO generation_jobs(id,category_id,kind,count) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING",
-    [randomUUID(), b.categoryId, b.kind, b.count],
+  if (
+    !(await pool.query("SELECT 1 FROM categories WHERE id=$1", [b.categoryId]))
+      .rowCount
+  )
+    throw new AppError(400, "CATEGORY_INVALID", "الفئة المختارة غير موجودة.");
+  if (
+    b.kind === "model" &&
+    (!process.env.MODEL_API_KEY ||
+      integerSetting("GENERATION_DAILY_BUDGET_CENTS", 0, 0, 100000) === 0)
+  )
+    throw new AppError(
+      409,
+      "GENERATION_DISABLED",
+      "توليد الأسئلة بالذكاء الاصطناعي غير مفعّل. يمكنك إضافة الأسئلة ومراجعة الاقتراحات يدويًا.",
+    );
+  const queued = await pool.query(
+    "INSERT INTO generation_jobs(id,category_id,kind,count,target_difficulty,target_format,target_region) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT DO NOTHING RETURNING id",
+    [
+      randomUUID(),
+      b.categoryId,
+      b.kind,
+      b.count,
+      b.difficulty ?? null,
+      b.format,
+      b.region,
+    ],
   );
+  if (!queued.rowCount)
+    throw new AppError(
+      409,
+      "JOB_PENDING",
+      "توجد مهمة قيد التنفيذ لهذه الفئة. راجعها قبل إضافة مهمة أخرى.",
+    );
   wakeWorker();
   res.json({ ok: true });
 });

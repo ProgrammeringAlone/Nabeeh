@@ -26,10 +26,10 @@ app.use(
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'"],
             styleSrc: ["'self'", "'unsafe-inline'"],
-            imgSrc: ["'self'", "data:"],
+            imgSrc: ["'self'", "data:", "blob:"],
             fontSrc: ["'self'"],
             connectSrc: ["'self'"],
-            mediaSrc: ["'self'"],
+            mediaSrc: ["'self'", "blob:"],
             objectSrc: ["'none'"],
             frameAncestors: ["'none'"],
           },
@@ -82,19 +82,15 @@ app.use(
       error.type === "entity.parse.failed" ||
       error.type === "entity.too.large"
     )
-      return res
-        .status(error.type === "entity.too.large" ? 413 : 400)
-        .json({
-          code: "INVALID_JSON",
-          message: "صيغة الطلب غير صالحة أو حجمه أكبر من المسموح.",
-        });
+      return res.status(error.type === "entity.too.large" ? 413 : 400).json({
+        code: "INVALID_JSON",
+        message: "صيغة الطلب غير صالحة أو حجمه أكبر من المسموح.",
+      });
     if (error.code === "23503")
-      return res
-        .status(400)
-        .json({
-          code: "INVALID_REFERENCE",
-          message: "الفئة أو السؤال المرتبط غير موجود.",
-        });
+      return res.status(400).json({
+        code: "INVALID_REFERENCE",
+        message: "الفئة أو السؤال المرتبط غير موجود.",
+      });
     if (error instanceof z.ZodError)
       return res.status(400).json({
         code: "INVALID_INPUT",
@@ -127,7 +123,8 @@ app.use(
 const server = app.listen(Number(process.env.PORT || 3000), "0.0.0.0", () =>
   console.log("Nabeeh running on port", process.env.PORT || 3000),
 );
-const stopWorker=process.env.RUN_WORKER === "true" ? startEmbeddedWorker() : async()=>{};
+const stopWorker =
+  process.env.RUN_WORKER === "true" ? startEmbeddedWorker() : async () => {};
 async function stop() {
   const forced = setTimeout(() => process.exit(1), 10000);
   forced.unref();

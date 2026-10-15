@@ -28,9 +28,7 @@ test("Arabic RTL, full game, reveal boundary, reload, scoring and summary", asyn
     await expect(page.getByTestId("question-text")).toBeVisible();
     await expect(page.getByTestId("answer-text")).toHaveCount(0);
     if (i === 0) {
-      await page
-        .getByRole("button", { name: "خيط الحلّ", exact: true })
-        .click();
+      await page.getByRole("button", { name: "تلميح", exact: true }).click();
       await page.reload();
       await expect(page.getByTestId("question-text")).toBeVisible();
     }

@@ -38,6 +38,8 @@ Real DB integration tests cover cross-category/variant exclusion, reservations u
 
 ## Scope and remaining work
 
-The release pack contains 36 original drafts with text, image, audio, video, ordering and word puzzles. Human approval is pending; production has no approved release bank yet. Accounts use private single-use recovery keys, not email reset. Choice and ordering responses persist in PostgreSQL. Bundled original media is immutable; optional private S3 uploads are served only to authorized games/editors.
+The release pack contains 36 original drafts with text, image, audio, video, ordering and word puzzles. Human approval is underway; production has a small approved release bank. Accounts use private single-use recovery keys, not email reset. Choice and ordering responses persist in PostgreSQL. Bundled original media is immutable; private uploads use bounded PostgreSQL storage or configured S3, served only to authorized games/editors.
 
 One free instance uses memory rate limits. Optional shared Redis limits have been tested across two server processes and must be enabled before multiple replicas. Database TLS, pool bounds and statement timeouts are configurable. Optional pgvector HNSW retrieval was validated with synthetic vectors; live Arabic embeddings and external S3 credentials remain unvalidated. Payments, tournaments, email/OIDC, provider benchmarks and hosted capacity checks remain future work. Public-reference research is documented in research.md.
+
+The guided editorial upload/review workflow, recommendation targets and opt-in leaderboard semantics are documented in [editorial-features.md](editorial-features.md).

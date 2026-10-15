@@ -84,18 +84,35 @@ test("Unauthorized admin access is blocked; editors review and publish persisten
     (await db.query("SELECT 1 FROM questions WHERE fact_key=$1", [factKey]))
       .rowCount,
   ).toBe(0);
+  await card
+    .getByRole("button", { name: "تعديل المسودة", exact: true })
+    .click();
   await page
-    .getByLabel("ملاحظة التحقّق التحريرية", { exact: false })
+    .getByRole("textbox", { name: "التلميح", exact: true })
+    .fill("قسّم حاصل الضرب إلى خطوات صغيرة.");
+  await page
+    .getByLabel("سبب تعديل المسودة", { exact: true })
+    .fill("راجعت صياغة التلميح وجعلت خطوات حل السؤال أكثر وضوحًا.");
+  await page.getByRole("button", { name: "حفظ المسودة", exact: true }).click();
+  await expect(
+    page.getByRole("heading", {
+      name: "تعديل المسودة قبل الاعتماد",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+  await card
+    .getByLabel("ملاحظات المراجعة لهذا السؤال", { exact: true })
     .fill(
       `Verified calculation: ${a} * 17 = ${answer}. Original independent fact reviewed.`,
     );
-  await card.getByRole("button",{name:"تعديل المسودة",exact:true}).click();
-  await page.getByLabel("محتوى المسودة",{exact:true}).fill(JSON.stringify({...candidate,hint:"قسّم حاصل الضرب إلى خطوات صغيرة."}));
-  await page.getByRole("button",{name:"حفظ المسودة",exact:true}).click();
-  await expect(page.getByLabel("محتوى المسودة",{exact:true})).toHaveCount(0);
-  await page.getByLabel("راجعت مرشّحات التشابه", { exact: false }).check();
-  await card.getByRole("button", { name: "اعتماد", exact: true }).click();
+  const duplicateCheck = card.getByRole("checkbox", {
+    name: /راجعت الأسئلة المشابهة/,
+  });
+  if (await duplicateCheck.count()) await duplicateCheck.check();
+  await card.getByRole("button", { name: "اعتماد السؤال", exact: true }).click();
   await page.getByRole("button", { name: "تأكيد", exact: true }).click();
+  await expect(card).toHaveCount(0);
+  await page.getByRole("button", { name: /^المعتمدة/ }).click();
   await expect(card.getByText("معتمد", { exact: true })).toBeVisible();
   expect(
     (
@@ -145,13 +162,17 @@ test("Unauthorized admin access is blocked; editors review and publish persisten
     ],
   );
   await page.reload();
-  await page.getByRole("button", { name: "إدارة الوصول", exact: true }).click();
+  await page
+    .getByRole("button", { name: "صلاحيات المستخدمين", exact: true })
+    .click();
   const member = page
     .locator(".report-row")
     .filter({ has: page.getByText(targetUsername, { exact: true }) });
   await member.getByRole("button", { name: "محرّر", exact: true }).click();
   await page.getByRole("button", { name: "تأكيد", exact: true }).click();
-  await expect(member.getByText("editor", { exact: true })).toBeVisible();
+  await expect(
+    member.locator("p").filter({hasText:/^محرّر$/}),
+  ).toBeVisible();
   await db.query("DELETE FROM users WHERE id=$1", [targetId]);
   await db.query("DELETE FROM profiles WHERE id=$1", [targetProfile]);
   await db.query("DELETE FROM accepted_answers WHERE question_id=$1", [q.id]);

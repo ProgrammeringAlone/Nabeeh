@@ -2,7 +2,7 @@ name: Verify Nabeeh
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, nabeeh-launch]
   workflow_dispatch:
 permissions:
   contents: read

@@ -3,8 +3,9 @@ import type pg from "pg";
 import { z } from "zod";
 import { pool, transaction, AppError } from "./db.ts";
 import { tokenHash } from "./auth.ts";
-import {wakeWorker} from "./worker.ts";
-import {allocateBoard} from "./selection.ts";
+import { wakeWorker } from "./worker.ts";
+import { allocateBoard } from "./selection.ts";
+import { normalizeLeaderboardTeamName } from "./leaderboard.ts";
 export const setupSchema = z
   .object({
     categoryIds: z
@@ -39,14 +40,50 @@ export const setupSchema = z
       .max(20)
       .default([]),
     participantTokens: z.array(z.string().min(20).max(100)).max(12).default([]),
+    hostTeam: z.union([z.literal(0), z.literal(1)]).optional(),
+    participantTeams: z
+      .array(z.union([z.literal(0), z.literal(1)]))
+      .max(12)
+      .optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((v, ctx) => {
+    if (
+      normalizeLeaderboardTeamName(v.teamNames[0]) ===
+      normalizeLeaderboardTeamName(v.teamNames[1])
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["teamNames"],
+        message: "اختر اسمين مختلفين للفريقين.",
+      });
+    if (new Set(v.participantTokens).size !== v.participantTokens.length)
+      ctx.addIssue({
+        code: "custom",
+        path: ["participantTokens"],
+        message: "أضف رمز كل مشارك مرة واحدة.",
+      });
+    if (
+      v.participantTeams &&
+      v.participantTeams.length !== v.participantTokens.length
+    )
+      ctx.addIssue({
+        code: "custom",
+        path: ["participantTeams"],
+        message: "حدّد فريقًا لكل رمز مشاركة.",
+      });
+  });
 export async function createGame(host: string, input: unknown) {
   const setup = setupSchema.parse(input),
     id = randomUUID();
   return transaction(async (db) => {
     const participants = [host];
-    for (const token of [...setup.participantTokens].sort()) {
+    const assignments = new Map<string, number | null>([
+      [host, setup.hostTeam ?? null],
+    ]);
+    for (const { token, index } of setup.participantTokens
+      .map((token, index) => ({ token, index }))
+      .sort((a, b) => (a.token < b.token ? -1 : 1))) {
       const {
         rows: [row],
       } = await db.query(
@@ -60,6 +97,19 @@ export async function createGame(host: string, input: unknown) {
           "رمز المشارك منتهي أو غير صالح.",
         );
       participants.push(row.profile_id);
+      const team = setup.participantTeams?.[index] ?? null;
+      if (
+        assignments.has(row.profile_id) &&
+        team !== null &&
+        assignments.get(row.profile_id) !== null &&
+        assignments.get(row.profile_id) !== team
+      )
+        throw new AppError(
+          400,
+          "PARTICIPANT_TEAM",
+          "لا يمكن ربط الحساب نفسه بفريقين في اللعبة الواحدة.",
+        );
+      assignments.set(row.profile_id, assignments.get(row.profile_id) ?? team);
       await db.query(
         "UPDATE participant_tokens SET consumed_at=now() WHERE token_hash=$1",
         [tokenHash(token)],
@@ -92,11 +142,29 @@ export async function createGame(host: string, input: unknown) {
         "INSERT INTO players(id,game_id,team_index,name) VALUES($1,$2,$3,$4)",
         [randomUUID(), id, p.team, p.name],
       );
+    const registered = new Set(
+      (
+        await db.query(
+          "SELECT profile_id FROM users WHERE profile_id=ANY($1::uuid[])",
+          [profiles],
+        )
+      ).rows.map((u) => u.profile_id),
+    );
     for (const p of profiles)
-      await db.query("INSERT INTO game_participants VALUES($1,$2)", [id, p]);
+      await db.query(
+        "INSERT INTO game_participants(game_id,profile_id,team_index) VALUES($1,$2,$3)",
+        [id, p, registered.has(p) ? (assignments.get(p) ?? null) : null],
+      );
     let position = 0;
-    if((await db.query("SELECT id FROM categories WHERE id=ANY($1)",[setup.categoryIds])).rowCount!==setup.categoryIds.length) throw new AppError(400,"CATEGORY","الفئة غير موجودة.");
-    const selected=await allocateBoard(db,profiles,setup);
+    if (
+      (
+        await db.query("SELECT id FROM categories WHERE id=ANY($1)", [
+          setup.categoryIds,
+        ])
+      ).rowCount !== setup.categoryIds.length
+    )
+      throw new AppError(400, "CATEGORY", "الفئة غير موجودة.");
+    const selected = await allocateBoard(db, profiles, setup);
     for (const [index, category] of setup.categoryIds.entries()) {
       if (
         !(await db.query("SELECT 1 FROM categories WHERE id=$1", [category]))
@@ -113,7 +181,7 @@ export async function createGame(host: string, input: unknown) {
           setup.difficulty === "mixed"
             ? ["easy", "medium", "hard"][n % 3]
             : setup.difficulty;
-        const q={id:selected[position].questionId};
+        const q = { id: selected[position].questionId };
         await db.query(
           "INSERT INTO game_questions(id,game_id,question_id,category_id,value,position) VALUES($1,$2,$3,$4,$5,$6)",
           [
@@ -139,14 +207,18 @@ export async function createGame(host: string, input: unknown) {
   }).catch(async (error) => {
     if (error instanceof AppError && error.code === "FRESH_POOL_EXHAUSTED") {
       for (const cat of setup.categoryIds) {
-        await pool.query("INSERT INTO replenishment_requests(category_id,difficulty,region) SELECT $1,$2,$3 WHERE EXISTS(SELECT 1 FROM categories WHERE id=$1) ON CONFLICT(category_id,difficulty,region) DO UPDATE SET requested_at=now(),resolved_at=null", [cat,setup.difficulty,setup.region]);
+        await pool.query(
+          "INSERT INTO replenishment_requests(category_id,difficulty,region) SELECT $1,$2,$3 WHERE EXISTS(SELECT 1 FROM categories WHERE id=$1) ON CONFLICT(category_id,difficulty,region) DO UPDATE SET requested_at=now(),resolved_at=null",
+          [cat, setup.difficulty, setup.region],
+        );
         await pool.query(
           "INSERT INTO generation_jobs(id,category_id,kind,count) SELECT $1,$2,'arithmetic',6 WHERE $2='logic' ON CONFLICT DO NOTHING",
           [randomUUID(), cat],
         );
       }
     }
-    if (error instanceof AppError && error.code === "FRESH_POOL_EXHAUSTED") wakeWorker();
+    if (error instanceof AppError && error.code === "FRESH_POOL_EXHAUSTED")
+      wakeWorker();
     throw error;
   });
 }
@@ -405,19 +477,49 @@ export async function score(id: string, host: string, input: unknown) {
   return gameState(id, host);
 }
 export async function respond(id: string, host: string, input: unknown) {
-  const response = z.object({ items: z.array(z.string().max(200)).min(2).max(8).optional(), choice: z.string().max(200).optional() }).strict().parse(input);
-  await transaction(async db => {
-    const game = await lockGame(db,id,host);
-    const { rows: [q] } = await db.query("SELECT i.status,i.deadline,q.format,q.options FROM game_questions i JOIN questions q ON q.id=i.question_id WHERE i.id=$1 FOR UPDATE OF i", [game.current_instance]);
-    if (!q || q.status !== "open" || new Date(q.deadline).getTime() < Date.now())
-      throw new AppError(409,"RESPONSE_CLOSED","انتهى وقت الإجابة.");
-    const valid = q.format === "ordering"
-      ? response.items && !response.choice && JSON.stringify([...response.items].sort()) === JSON.stringify([...q.options].sort())
-      : q.format === "choice" && response.choice && !response.items && q.options.includes(response.choice);
-    if (!valid) throw new AppError(400,"RESPONSE_INVALID","الإجابة لا تطابق خيارات السؤال.");
-    await db.query("UPDATE game_questions SET response=$2 WHERE id=$1", [game.current_instance, response]);
+  const response = z
+    .object({
+      items: z.array(z.string().max(200)).min(2).max(8).optional(),
+      choice: z.string().max(200).optional(),
+    })
+    .strict()
+    .parse(input);
+  await transaction(async (db) => {
+    const game = await lockGame(db, id, host);
+    const {
+      rows: [q],
+    } = await db.query(
+      "SELECT i.status,i.deadline,q.format,q.options FROM game_questions i JOIN questions q ON q.id=i.question_id WHERE i.id=$1 FOR UPDATE OF i",
+      [game.current_instance],
+    );
+    if (
+      !q ||
+      q.status !== "open" ||
+      new Date(q.deadline).getTime() < Date.now()
+    )
+      throw new AppError(409, "RESPONSE_CLOSED", "انتهى وقت الإجابة.");
+    const valid =
+      q.format === "ordering"
+        ? response.items &&
+          !response.choice &&
+          JSON.stringify([...response.items].sort()) ===
+            JSON.stringify([...q.options].sort())
+        : q.format === "choice" &&
+          response.choice &&
+          !response.items &&
+          q.options.includes(response.choice);
+    if (!valid)
+      throw new AppError(
+        400,
+        "RESPONSE_INVALID",
+        "الإجابة لا تطابق خيارات السؤال.",
+      );
+    await db.query("UPDATE game_questions SET response=$2 WHERE id=$1", [
+      game.current_instance,
+      response,
+    ]);
   });
-  return gameState(id,host);
+  return gameState(id, host);
 }
 export async function lifeline(id: string, host: string, kind: string) {
   await transaction(async (db) => {

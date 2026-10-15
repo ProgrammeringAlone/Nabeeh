@@ -37,5 +37,6 @@ Use Node 24+. Run `npm run build`, `npm test`, and `npm run test:e2e`. The brows
 - [Delivery status](docs/status.md): verified capabilities and remaining work.
 - [Free Render + Neon launch](docs/launch.md): setup steps and a path to paid scaling.
 - [Release review pack](docs/release-review.md): 36 original drafts, including image/audio/video puzzles.
+- [Question upload, review, suggestions and leaderboards](docs/editorial-features.md): guided publishing, private persistent uploads and opt-in rankings.
 
-The pilot is prepared for deployment. Release questions still require your editorial approval, and the hosted service needs validation after deployment. Free hosting has suspension and usage limits; shared Redis, database connection budgets and optional private object storage support future scaling. Live AI and external storage integrations remain unvalidated without provider credentials.
+The pilot is deployed on Render with Neon. Hosted word games and account recovery passed checks; remaining release questions require editorial approval and hosted media verification. Free hosting has suspension and usage limits; shared Redis, database connection budgets and optional private object storage support future scaling. Live AI and external storage integrations remain unvalidated without provider credentials.

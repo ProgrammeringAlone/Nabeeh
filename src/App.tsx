@@ -1,4 +1,17 @@
 import { useState, useEffect, useRef, type ReactNode } from "react";
+import Leaderboard from "./Leaderboard";
+import QuestionComposer from "./QuestionComposer";
+import EditorialSuggestions, {
+  type SuggestedQuestionTarget,
+} from "./EditorialSuggestions";
+import { ReviewQueue } from "./ReviewQueue";
+import {
+  statusLabels,
+  roleLabels,
+  modeLabels,
+  difficultyLabels,
+  labelFor,
+} from "./arabic";
 import {
   ArrowLeft,
   ArrowRight,
@@ -51,9 +64,16 @@ type Me = {
   role: string;
   seen: number;
 };
-function categoryHasEnoughQuestions(c: Category, rounds = 1, difficulty = "mixed") {
-  return c.available >= rounds * 3 &&
-    (difficulty !== "mixed" || [c.easy, c.medium, c.hard].every(count => count >= rounds));
+function categoryHasEnoughQuestions(
+  c: Category,
+  rounds = 1,
+  difficulty = "mixed",
+) {
+  return (
+    c.available >= rounds * 3 &&
+    (difficulty !== "mixed" ||
+      [c.easy, c.medium, c.hard].every((count) => count >= rounds))
+  );
 }
 type Game = {
   id: string;
@@ -120,15 +140,15 @@ const regions = [
   ["om", "عُمان"],
 ];
 const difficulties = [
-  ["mixed", "متنوّع"],
+  ["mixed", "مزيج المستويات"],
   ["easy", "سهل"],
   ["medium", "متوسط"],
   ["hard", "صعب"],
   ["expert", "خبير"],
 ];
 const lifelineNames: Record<string, string> = {
-  hint: "خيط الحلّ",
-  double: "ضاعفها",
+  hint: "تلميح",
+  double: "مضاعفة النقاط",
   "extra-time": "وقت إضافي",
 };
 async function api<T = any>(
@@ -337,6 +357,12 @@ export function App() {
             <button onClick={() => navigate("/account")}>
               {me?.username || "حسابي"}
             </button>
+            <button
+              className={route === "/leaderboard" ? "active" : ""}
+              onClick={() => navigate("/leaderboard")}
+            >
+              لوحة الصدارة
+            </button>
             {["editor", "admin"].includes(me?.role || "") && (
               <button onClick={() => navigate("/admin")}>التحرير</button>
             )}
@@ -394,6 +420,8 @@ export function App() {
           <Account {...context} />
         ) : route === "/admin" ? (
           <Admin {...context} />
+        ) : route === "/leaderboard" ? (
+          <Leaderboard isSignedIn={!!me.userId} onError={setError} />
         ) : route === "/privacy" ? (
           <Privacy />
         ) : (
@@ -413,6 +441,9 @@ export function App() {
             <div className="footer-links">
               <button onClick={() => navigate("/categories")}>الفئات</button>
               <button onClick={() => navigate("/games")}>ألعابي</button>
+              <button onClick={() => navigate("/leaderboard")}>
+                لوحة الصدارة
+              </button>
               <button onClick={() => navigate("/privacy")}>الخصوصية</button>
               <span>صُنع للّمة، بالعربي.</span>
             </div>
@@ -702,12 +733,12 @@ function Home({ run, busy }: Context) {
           <div className="lifeline-cards">
             <div>
               <Lightbulb />
-              <h3>خيط الحلّ</h3>
+              <h3>تلميح</h3>
               <p>تلميح يفتح لك زاوية جديدة.</p>
             </div>
             <div>
               <Zap />
-              <h3>ضاعفها</h3>
+              <h3>مضاعفة النقاط</h3>
               <p>ضاعف نقاط السؤال قبل كشف الإجابة.</p>
             </div>
             <div>
@@ -872,7 +903,7 @@ function Library({ run }: Context) {
           </select>
         </label>
         <label className="select-label">
-          المستوى
+          الصعوبة
           <select
             value={difficulty}
             onChange={(e) => setDifficulty(e.target.value)}
@@ -934,7 +965,7 @@ function Library({ run }: Context) {
     </section>
   );
 }
-function Setup({ run, busy }: Context) {
+function Setup({ run, busy, me }: Context) {
   const [categories, setCategories] = useState<Category[]>([]),
     [selected, setSelected] = useState<string[]>(() => {
       const c = sessionStorage.getItem("nabeeh-category");
@@ -953,12 +984,14 @@ function Setup({ run, busy }: Context) {
     [negative, setNegative] = useState(false),
     [lifelines, setLifelines] = useState(["hint", "double"]),
     [players, setPlayers] = useState(["", ""]),
-    [tokens, setTokens] = useState("");
+    [tokens, setTokens] = useState(""),
+    [hostTeam, setHostTeam] = useState(0),
+    [participantTeams, setParticipantTeams] = useState<number[]>([]);
   useEffect(() => {
     sessionStorage.removeItem("nabeeh-mode");
   }, []);
   useEffect(() => {
-    let active=true;
+    let active = true;
     api<Category[]>(
       "/categories?" +
         new URLSearchParams({
@@ -966,16 +999,32 @@ function Setup({ run, busy }: Context) {
           difficulty: difficulty === "mixed" ? "all" : difficulty,
         }),
     )
-      .then(rows=>{
-        if(!active)return;setCategories(rows);
-        setSelected(previous=>{
-          const valid=previous.filter(id=>rows.some(c=>c.id===id && categoryHasEnoughQuestions(c,rounds,difficulty)));
-          return valid.length?valid:rows.filter(c=>categoryHasEnoughQuestions(c,rounds,difficulty)).slice(0,3).map(c=>c.id);
+      .then((rows) => {
+        if (!active) return;
+        setCategories(rows);
+        setSelected((previous) => {
+          const valid = previous.filter((id) =>
+            rows.some(
+              (c) =>
+                c.id === id &&
+                categoryHasEnoughQuestions(c, rounds, difficulty),
+            ),
+          );
+          return valid.length
+            ? valid
+            : rows
+                .filter((c) =>
+                  categoryHasEnoughQuestions(c, rounds, difficulty),
+                )
+                .slice(0, 3)
+                .map((c) => c.id);
         });
       })
       .catch(() => {});
-    return()=>{active=false;};
-  }, [region, difficulty,rounds]);
+    return () => {
+      active = false;
+    };
+  }, [region, difficulty, rounds]);
   const toggle = (id: string) =>
     setSelected((s) =>
       s.includes(id)
@@ -987,7 +1036,16 @@ function Setup({ run, busy }: Context) {
   const start = () =>
     run(async () => {
       if (!selected.length) throw new Error("اختر فئة واحدة على الأقل.");
-      if (selected.some(id=>!categories.some(c=>c.id===id && categoryHasEnoughQuestions(c,rounds,difficulty))))
+      if (
+        selected.some(
+          (id) =>
+            !categories.some(
+              (c) =>
+                c.id === id &&
+                categoryHasEnoughQuestions(c, rounds, difficulty),
+            ),
+        )
+      )
         throw new Error("اختر فئة تتوفر فيها أسئلة كافية للمستوى المحدد.");
       const { id } = await api("/games", {
         categoryIds: selected,
@@ -1007,6 +1065,11 @@ function Setup({ run, busy }: Context) {
             .filter((x) => x.name),
         ),
         participantTokens: tokens.split(/[\s,،]+/).filter(Boolean),
+        hostTeam,
+        participantTeams: tokens
+          .split(/[\s,،]+/)
+          .filter(Boolean)
+          .map((_, i) => participantTeams[i] ?? 0),
       });
       navigate("/game/" + id);
     });
@@ -1061,7 +1124,10 @@ function Setup({ run, busy }: Context) {
                     />
                   </label>
                   <label>
-                    اللاعبون <span className="muted">(اختياري، افصل بـ ،)</span>
+                    اللاعبون{" "}
+                    <span className="muted">
+                      (اختياري، افصل الأسماء بفاصلة)
+                    </span>
                     <input
                       value={players[i]}
                       onChange={(e) =>
@@ -1086,7 +1152,9 @@ function Setup({ run, busy }: Context) {
                 className="text-button"
                 onClick={() => {
                   const ids = categories
-                    .filter((c) => categoryHasEnoughQuestions(c,rounds,difficulty))
+                    .filter((c) =>
+                      categoryHasEnoughQuestions(c, rounds, difficulty),
+                    )
                     .map((c) => c.id);
                   for (let i = ids.length - 1; i > 0; i--) {
                     const j = Math.floor(Math.random() * (i + 1));
@@ -1114,7 +1182,7 @@ function Setup({ run, busy }: Context) {
                 </select>
               </label>
               <label>
-                المستوى
+                الصعوبة
                 <select
                   value={difficulty}
                   onChange={(e) => setDifficulty(e.target.value)}
@@ -1135,7 +1203,8 @@ function Setup({ run, busy }: Context) {
                   aria-pressed={selected.includes(c.id)}
                   onClick={() => toggle(c.id)}
                   disabled={
-                    !categoryHasEnoughQuestions(c,rounds,difficulty) && !selected.includes(c.id)
+                    !categoryHasEnoughQuestions(c, rounds, difficulty) &&
+                    !selected.includes(c.id)
                   }
                 >
                   <span style={{ background: c.color }}>
@@ -1143,7 +1212,10 @@ function Setup({ run, busy }: Context) {
                   </span>
                   <strong>{c.name}</strong>
                   <small>{c.available} سؤال جديد</small>
-                  {c.available > 0 && !categoryHasEnoughQuestions(c,rounds,difficulty) && <small>بانتظار أسئلة بالمستويات المطلوبة</small>}
+                  {c.available > 0 &&
+                    !categoryHasEnoughQuestions(c, rounds, difficulty) && (
+                      <small>بانتظار أسئلة بالمستويات المطلوبة</small>
+                    )}
                   {selected.includes(c.id) && (
                     <Check className="selection-check" size={17} />
                   )}
@@ -1194,7 +1266,7 @@ function Setup({ run, busy }: Context) {
                 checked={stealing}
                 onChange={(e) => setStealing(e.target.checked)}
               />
-              السماح للفريق الآخر بخطف السؤال بعد كشف الإجابة
+              السماح للفريق الآخر بخطف نقاط السؤال
             </label>
             <label className="check-row">
               <input
@@ -1221,6 +1293,25 @@ function Setup({ run, busy }: Context) {
                 </label>
               ))}
             </div>
+            {me?.userId && (
+              <label className="host-team-label">
+                فريق حسابك في هذه اللعبة
+                <select
+                  value={hostTeam}
+                  onChange={(e) => setHostTeam(Number(e.target.value))}
+                >
+                  {names.map((name, i) => (
+                    <option value={i} key={i}>
+                      {name || `الفريق ${i + 1}`}
+                    </option>
+                  ))}
+                </select>
+                <span className="muted">
+                  تُحتسب نتائج هذا الفريق لحسابك بعد اكتمال اللعبة. يمكنك
+                  إظهارها باختيار المشاركة في لوحة الصدارة.
+                </span>
+              </label>
+            )}
             <details className="participant-details">
               <summary>
                 ربط سجلّ المشاركين المسجّلين <ChevronDown size={16} />
@@ -1239,6 +1330,34 @@ function Setup({ run, busy }: Context) {
                   maxLength={1400}
                 />
               </label>
+              {tokens
+                .split(/[\s,،]+/)
+                .filter(Boolean)
+                .map((token, i) => (
+                  <label className="participant-team-row" key={token + ":" + i}>
+                    فريق المشارك {i + 1}
+                    <select
+                      value={participantTeams[i] ?? 0}
+                      onChange={(e) =>
+                        setParticipantTeams((values) => {
+                          const next = [...values];
+                          next[i] = Number(e.target.value);
+                          return next;
+                        })
+                      }
+                    >
+                      {names.map((name, team) => (
+                        <option value={team} key={team}>
+                          {name || `الفريق ${team + 1}`}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                ))}
+              <p className="muted">
+                اربط كل حساب بفريقه قبل البدء لاحتساب النقاط والألعاب المكتملة
+                ومرات الفوز. كتابة اسم اللاعب وحدها لا تربط حسابه.
+              </p>
             </details>
           </section>
         </div>
@@ -1269,7 +1388,19 @@ function Setup({ run, busy }: Context) {
           </div>
           <Button
             onClick={start}
-            disabled={busy || !selected.length || names.some((n) => !n.trim()) || selected.some(id=>!categories.some(c=>c.id===id && categoryHasEnoughQuestions(c,rounds,difficulty)))}
+            disabled={
+              busy ||
+              !selected.length ||
+              names.some((n) => !n.trim()) ||
+              selected.some(
+                (id) =>
+                  !categories.some(
+                    (c) =>
+                      c.id === id &&
+                      categoryHasEnoughQuestions(c, rounds, difficulty),
+                  ),
+              )
+            }
           >
             ابدأ اللعبة <ArrowLeft size={18} />
           </Button>
@@ -1500,40 +1631,114 @@ function GameView({
           </div>
           <p className="question-instruction">
             {q.status === "revealed"
-              ? "الإجابة مكشوفة — المضيف يسجّل النتيجة"
+              ? "ظهرت الإجابة — سجّل نتيجة الفريق"
               : "تشاوروا… الوقت بدأ"}
           </p>
           <h1 data-testid="question-text">{q.text}</h1>
-          {q.media_id && <figure className="question-media">
-            {q.format === "image" ? <img src={`/api/games/${game.id}/media/${q.id}`} alt={q.media_alt || "تحدّي بصري"} />
-              : q.format === "audio" ? <audio controls preload="metadata" aria-label={q.media_alt || "تحدّي صوتي"} src={`/api/games/${game.id}/media/${q.id}`} />
-              : <video controls playsInline preload="metadata" aria-label={q.media_alt || "تحدّي مرئي"} src={`/api/games/${game.id}/media/${q.id}`} />}
-            {q.media_transcript && <details><summary>بديل نصّي للوسائط</summary><p>{q.media_transcript}</p></details>}
-            <figcaption><small>{q.media_credit} · {q.media_license}</small></figcaption>
-          </figure>}
-          {q.format === "ordering" && q.options ? <div className="ordering-challenge">
-            <p>رتّب البطاقات باستخدام أزرار التقديم والتأخير. قرار النتيجة للمضيف.</p>
-            <ol>
-              {(q.response?.items || q.options).map((item,i,items) => <li key={item}>
-                <span>{item}</span>
-                <div>
-                  <button aria-label={`قدّم ${item}`} disabled={busy || q.status !== "open" || remaining === 0 || i === 0} onClick={() => {
-                    const next = [...items]; [next[i-1],next[i]]=[next[i],next[i-1]]; mutate("response",{items:next});
-                  }}>↑</button>
-                  <button aria-label={`أخّر ${item}`} disabled={busy || q.status !== "open" || remaining === 0 || i === items.length-1} onClick={() => {
-                    const next = [...items]; [next[i+1],next[i]]=[next[i],next[i+1]]; mutate("response",{items:next});
-                  }}>↓</button>
-                </div>
-              </li>)}
-            </ol>
-          </div> : q.format === "choice" && q.options ? <div className="choice-challenge" aria-label="خيارات الإجابة">
-            {q.options.map(option => <button key={option} aria-pressed={q.response?.choice === option} disabled={busy || q.status !== "open" || remaining === 0} onClick={() => mutate("response",{choice:option})}>{option}</button>)}
-          </div> : q.options && (
-            <ol className="question-options">
-              {q.options.map((o) => (
-                <li key={o}>{o}</li>
+          {q.media_id && (
+            <figure className="question-media">
+              {q.format === "image" ? (
+                <img
+                  src={`/api/games/${game.id}/media/${q.id}`}
+                  alt={q.media_alt || "تحدّي بصري"}
+                />
+              ) : q.format === "audio" ? (
+                <audio
+                  controls
+                  preload="metadata"
+                  aria-label={q.media_alt || "تحدّي صوتي"}
+                  src={`/api/games/${game.id}/media/${q.id}`}
+                />
+              ) : (
+                <video
+                  controls
+                  playsInline
+                  preload="metadata"
+                  aria-label={q.media_alt || "تحدّي مرئي"}
+                  src={`/api/games/${game.id}/media/${q.id}`}
+                />
+              )}
+              {q.media_transcript && (
+                <details>
+                  <summary>بديل نصّي للوسائط</summary>
+                  <p>{q.media_transcript}</p>
+                </details>
+              )}
+              <figcaption>
+                <small>
+                  {q.media_credit} · {q.media_license}
+                </small>
+              </figcaption>
+            </figure>
+          )}
+          {q.format === "ordering" && q.options ? (
+            <div className="ordering-challenge">
+              <p>
+                رتّب البطاقات باستخدام السهمين ↑ و↓. يحدّد المضيف صحة الإجابة.
+              </p>
+              <ol>
+                {(q.response?.items || q.options).map((item, i, items) => (
+                  <li key={item}>
+                    <span>{item}</span>
+                    <div>
+                      <button
+                        aria-label={`قدّم ${item}`}
+                        disabled={
+                          busy ||
+                          q.status !== "open" ||
+                          remaining === 0 ||
+                          i === 0
+                        }
+                        onClick={() => {
+                          const next = [...items];
+                          [next[i - 1], next[i]] = [next[i], next[i - 1]];
+                          mutate("response", { items: next });
+                        }}
+                      >
+                        ↑
+                      </button>
+                      <button
+                        aria-label={`أخّر ${item}`}
+                        disabled={
+                          busy ||
+                          q.status !== "open" ||
+                          remaining === 0 ||
+                          i === items.length - 1
+                        }
+                        onClick={() => {
+                          const next = [...items];
+                          [next[i + 1], next[i]] = [next[i], next[i + 1]];
+                          mutate("response", { items: next });
+                        }}
+                      >
+                        ↓
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : q.format === "choice" && q.options ? (
+            <div className="choice-challenge" aria-label="خيارات الإجابة">
+              {q.options.map((option) => (
+                <button
+                  key={option}
+                  aria-pressed={q.response?.choice === option}
+                  disabled={busy || q.status !== "open" || remaining === 0}
+                  onClick={() => mutate("response", { choice: option })}
+                >
+                  {option}
+                </button>
               ))}
-            </ol>
+            </div>
+          ) : (
+            q.options && (
+              <ol className="question-options">
+                {q.options.map((o) => (
+                  <li key={o}>{o}</li>
+                ))}
+              </ol>
+            )
           )}
           {q.hint && (
             <div className="hint">
@@ -1570,7 +1775,9 @@ function GameView({
               </div>
               {remaining === 0 && (
                 <p role="status" className="timer-notice">
-                  انتهى الوقت. اكشف الإجابة ثم سجّل الخطف أو التجاوز.
+                  {game.stealing
+                    ? "انتهى الوقت. اكشف الإجابة، ثم سجّل نقاط الخطف أو تجاوز السؤال."
+                    : "انتهى الوقت. اكشف الإجابة، ثم سجّل إجابة خاطئة أو تجاوز السؤال."}
                 </p>
               )}
               <Button onClick={() => mutate("reveal")} disabled={busy}>
@@ -1582,7 +1789,14 @@ function GameView({
               <div className="answer">
                 <span>الإجابة الصحيحة</span>
                 <h2 data-testid="answer-text">{q.answer}</h2>
-                {q.accepted_answers?.some(a=>a!==q.answer) && <p>تُقبل أيضًا: {q.accepted_answers.filter(a=>a!==q.answer).join("، ")}</p>}
+                {q.accepted_answers?.some((a) => a !== q.answer) && (
+                  <p>
+                    تُقبل أيضًا:{" "}
+                    {q.accepted_answers
+                      .filter((a) => a !== q.answer)
+                      .join("، ")}
+                  </p>
+                )}
                 <p>{q.explanation}</p>
               </div>
               <div className="score-actions">
@@ -1640,7 +1854,7 @@ function GameView({
         <>
           <div className="board-intro">
             <h1>يا {game.teams[game.activeTeam].name}، اختاروا تحدّيكم.</h1>
-            <p>كل ما زادت النقاط، زاد التحدّي.</p>
+            <p>اختاروا سؤالًا بقيمة النقاط التي تناسبكم.</p>
           </div>
           <div className="board-scroll">
             <div
@@ -1740,13 +1954,21 @@ function Account({ me, run, busy, confirm, refreshMe }: Context) {
             onSubmit={(e) => {
               e.preventDefault();
               run(async () => {
-                const result = await api("/auth/" + (recover ? "recover" : register ? "register" : "login"), {
-                  username,
-                  password,
-                  ...(recover ? {recoveryKey:recoveryInput} : {}),
-                });
+                const result = await api(
+                  "/auth/" +
+                    (recover ? "recover" : register ? "register" : "login"),
+                  {
+                    username,
+                    password,
+                    ...(recover ? { recoveryKey: recoveryInput } : {}),
+                  },
+                );
                 if (result.recoveryKey) setRecoveryKey(result.recoveryKey);
-                if (recover) { setRecover(false); setRegister(false); setRecoveryInput(""); }
+                if (recover) {
+                  setRecover(false);
+                  setRegister(false);
+                  setRecoveryInput("");
+                }
                 setPassword("");
                 await refreshMe();
               });
@@ -1756,20 +1978,47 @@ function Account({ me, run, busy, confirm, refreshMe }: Context) {
               <button
                 type="button"
                 className={register ? "chosen" : ""}
-                onClick={() => {setRegister(true);setRecover(false);}}
+                onClick={() => {
+                  setRegister(true);
+                  setRecover(false);
+                }}
               >
                 إنشاء حساب
               </button>
               <button
                 type="button"
                 className={!register ? "chosen" : ""}
-                onClick={() => {setRegister(false);setRecover(false);}}
+                onClick={() => {
+                  setRegister(false);
+                  setRecover(false);
+                }}
               >
                 تسجيل الدخول
               </button>
             </div>
-            <h2>{recover ? "استعد حسابك" : register ? "أسئلتك تتبعك على كل جهاز" : "ارجع لسجلّك"}</h2>
-            {recover && <label>مفتاح الاستعادة<input dir="ltr" required value={recoveryInput} onChange={e=>setRecoveryInput(e.target.value)} autoComplete="off" /><small>المفتاح الذي حفظته عند إنشاء الحساب. صالح لسنة واحدة وللاستخدام مرة واحدة.</small></label>}
+            <h2>
+              {recover
+                ? "استعد حسابك"
+                : register
+                  ? "أسئلتك تتبعك على كل جهاز"
+                  : "ارجع لسجلّك"}
+            </h2>
+            {recover && (
+              <label>
+                مفتاح الاستعادة
+                <input
+                  dir="ltr"
+                  required
+                  value={recoveryInput}
+                  onChange={(e) => setRecoveryInput(e.target.value)}
+                  autoComplete="off"
+                />
+                <small>
+                  المفتاح الذي حفظته عند إنشاء الحساب. صالح لسنة واحدة
+                  وللاستخدام مرة واحدة.
+                </small>
+              </label>
+            )}
             <label>
               اسم المستخدم
               <input
@@ -1785,22 +2034,33 @@ function Account({ me, run, busy, confirm, refreshMe }: Context) {
               <small>٣–٣٠ حرفًا إنجليزيًا صغيرًا، رقمًا أو _</small>
             </label>
             <label>
-              كلمة المرور
+              {recover ? "كلمة المرور الجديدة" : "كلمة المرور"}
               <input
                 type="password"
                 required
                 minLength={10}
                 maxLength={128}
-                autoComplete={register || recover ? "new-password" : "current-password"}
+                autoComplete={
+                  register || recover ? "new-password" : "current-password"
+                }
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
               <small>١٠ أحرف على الأقل</small>
             </label>
             <Button type="submit" disabled={busy}>
-              {recover ? "غيّر كلمة المرور" : register ? "أنشئ حسابي" : "دخول"} <ArrowLeft size={18} />
+              {recover ? "غيّر كلمة المرور" : register ? "أنشئ حسابي" : "دخول"}{" "}
+              <ArrowLeft size={18} />
             </Button>
-            {!register && !recover && <button type="button" className="text-button" onClick={()=>setRecover(true)}>نسيت كلمة المرور؟</button>}
+            {!register && !recover && (
+              <button
+                type="button"
+                className="text-button"
+                onClick={() => setRecover(true)}
+              >
+                نسيت كلمة المرور؟
+              </button>
+            )}
           </form>
           <div className="account-explanation">
             <ShieldCheck size={38} />
@@ -1846,11 +2106,32 @@ function Account({ me, run, busy, confirm, refreshMe }: Context) {
           )}
           <hr />
           <h2>مفتاح استعادة الحساب</h2>
-          <p>احفظ المفتاح في مكان آمن خارج المتصفح. يتيح تغيير كلمة المرور مع بقاء ألعابك وسجلّ أسئلتك. إنشاء مفتاح جديد يلغي القديم.</p>
-          <label>كلمة المرور لتجديد المفتاح<input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} /></label>
-          <Button secondary disabled={busy || !password} onClick={()=>run(async()=>{
-            const result = await api("/auth/recovery-key",{password}); setRecoveryKey(result.recoveryKey);setPassword("");
-          })}>أنشئ مفتاح استعادة جديد</Button>
+          <p>
+            احفظ المفتاح في مكان آمن خارج المتصفح. يتيح تغيير كلمة المرور مع
+            بقاء ألعابك وسجلّ أسئلتك. إنشاء مفتاح جديد يلغي القديم.
+          </p>
+          <label>
+            كلمة المرور لتجديد المفتاح
+            <input
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          <Button
+            secondary
+            disabled={busy || !password}
+            onClick={() =>
+              run(async () => {
+                const result = await api("/auth/recovery-key", { password });
+                setRecoveryKey(result.recoveryKey);
+                setPassword("");
+              })
+            }
+          >
+            أنشئ مفتاح استعادة جديد
+          </Button>
           <hr />
           <Button
             secondary
@@ -1868,15 +2149,38 @@ function Account({ me, run, busy, confirm, refreshMe }: Context) {
           </Button>
         </div>
       )}
-      {recoveryKey && <div className="setup-panel recovery-key" role="status">
-        <h2>احفظ مفتاحك الآن</h2><p>لن يُعرض مجددًا. لا تشاركه مع أحد. بعد استعادة الحساب سجّل الدخول بكلمة المرور الجديدة.</p>
-        <output dir="ltr">{recoveryKey}</output>
-        <Button secondary onClick={()=>{
-          const blob = new Blob([`Nabeeh recovery key for ${me.username || username}\n${recoveryKey}\nKeep private. Single use, expires in one year.\n`],{type:"text/plain"});
-          const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download="nabeeh-recovery-key.txt";a.click();URL.revokeObjectURL(url);
-        }}>تنزيل مفتاح الاستعادة</Button>
-        <Button secondary onClick={()=>setRecoveryKey("")}>حفظت المفتاح</Button>
-      </div>}
+      {recoveryKey && (
+        <div className="setup-panel recovery-key" role="status">
+          <h2>احفظ مفتاحك الآن</h2>
+          <p>
+            لن يُعرض مجددًا. لا تشاركه مع أحد. بعد استعادة الحساب سجّل الدخول
+            بكلمة المرور الجديدة.
+          </p>
+          <output dir="ltr">{recoveryKey}</output>
+          <Button
+            secondary
+            onClick={() => {
+              const blob = new Blob(
+                [
+                  `Nabeeh recovery key for ${me.username || username}\n${recoveryKey}\nKeep private. Single use, expires in one year.\n`,
+                ],
+                { type: "text/plain" },
+              );
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = "nabeeh-recovery-key.txt";
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            تنزيل مفتاح الاستعادة
+          </Button>
+          <Button secondary onClick={() => setRecoveryKey("")}>
+            حفظت المفتاح
+          </Button>
+        </div>
+      )}
       <div className="privacy-actions">
         <a className="text-button" href="/api/account/export" download>
           <Download size={17} />
@@ -1932,7 +2236,12 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
     [verificationJson, setVerificationJson] = useState(""),
     [metrics, setMetrics] = useState<any>(null),
     [access, setAccess] = useState<any[]>([]),
-    [draftId,setDraftId]=useState(""),[draftJson,setDraftJson]=useState(""),[draftRevision,setDraftRevision]=useState(1);
+    [draftId, setDraftId] = useState(""),
+    [draftJson, setDraftJson] = useState(""),
+    [draftRevision, setDraftRevision] = useState(1),
+    [reviewVersion, setReviewVersion] = useState(0),
+    [composeTarget, setComposeTarget] =
+      useState<SuggestedQuestionTarget | null>(null);
   const load = async () => {
     setOverview(await api("/admin/overview"));
     setQuestions(await api("/admin/questions"));
@@ -1953,23 +2262,27 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
       <div className="page-heading">
         <div className="eyebrow">كل سؤال يستحق مراجعة</div>
         <h1>غرفة التحرير</h1>
-        <p>لا ينتقل أي سؤال مولّد إلى اللعب قبل مراجعة المصادر والتشابه.</p>
-        <Button secondary disabled={busy} onClick={()=>run(load)}>حدّث قائمة المراجعة</Button>
+        <p>
+          لا يظهر السؤال في اللعب قبل تحديد فئته وصعوبته والتحقّق من الإجابة
+          والتكرار.
+        </p>
+        <Button secondary disabled={busy} onClick={() => run(load)}>
+          حدّث قائمة المراجعة
+        </Button>
       </div>
       <div className="admin-stats">
         {overview?.questions.map((s: any) => (
           <div key={s.status}>
             <strong>{s.count}</strong>
             <span>
-              {s.status === "approved" ? "أسئلة في المكتبة" : s.status}
+              {s.status === "approved"
+                ? "أسئلة معتمدة"
+                : labelFor(statusLabels, s.status)}
             </span>
           </div>
         ))}
         <div>
-          <strong>
-            {overview?.candidates.filter((c: any) => c.status === "review")
-              .length || 0}
-          </strong>
+          <strong>{overview?.candidateCounts?.review || 0}</strong>
           <span>بانتظار المراجعة</span>
         </div>
         <div>
@@ -1989,11 +2302,13 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
       </div>
       <div className="tabs admin-tabs">
         {[
+          ["upload", "إضافة سؤال"],
           ["review", "مراجعة المحتوى"],
+          ["suggestions", "اقتراحات الأسئلة"],
           ["questions", "المكتبة"],
           ["generate", "التوليد والاستيراد"],
           ["metrics", "المخزون والسجلّ"],
-          ...(me?.role === "admin" ? [["access", "إدارة الوصول"]] : []),
+          ...(me?.role === "admin" ? [["access", "صلاحيات المستخدمين"]] : []),
         ].map(([v, l]) => (
           <button
             key={v}
@@ -2004,143 +2319,135 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
           </button>
         ))}
       </div>
+      {tab === "upload" && (
+        <QuestionComposer
+          categories={overview?.inventory || []}
+          initialTarget={composeTarget}
+          onSubmitted={async () => {
+            await load();
+            setReviewVersion((v) => v + 1);
+          }}
+        />
+      )}
+      {tab === "suggestions" && (
+        <EditorialSuggestions
+          request={api}
+          busy={busy}
+          onCompose={(target) => {
+            setComposeTarget(target);
+            setTab("upload");
+          }}
+          onReview={() => setTab("review")}
+          onQueued={load}
+        />
+      )}
       {tab === "review" && (
         <>
-          {draftId && <div className="setup-panel">
-            <h2>تعديل المسودة قبل الاعتماد</h2><label htmlFor="candidate-draft">محتوى المسودة</label><textarea id="candidate-draft" dir="ltr" className="json-input" value={draftJson} onChange={e=>setDraftJson(e.target.value)} />
-            <p>أدخل سبب التعديل في ملاحظة التحقّق أدناه. نعيد فحص التشابه، وتبقى المسودة خارج اللعب.</p>
-            <Button disabled={busy || note.trim().length<12} onClick={()=>run(async()=>{
-              await api(`/admin/candidates/${draftId}/edit`,{candidate:JSON.parse(draftJson),reason:note,expectedRevision:draftRevision});setDraftId("");setDraftJson("");await load();
-            })}>حفظ المسودة</Button>
-            <Button secondary onClick={()=>setDraftId("")}>إلغاء التعديل</Button>
-          </div>}
-          <div className="setup-panel">
-            <label>
-              ملاحظة التحقّق التحريرية (تُحفظ في سجلّ التدقيق)
-              <textarea
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                placeholder="المصدر الدقيق، طريقة التحقّق، وحسم التشابه…"
-                minLength={12}
-              />
-            </label>
-            <label className="check-row">
-              <input
-                type="checkbox"
-                checked={reviewed}
-                onChange={(e) => setReviewed(e.target.checked)}
-              />
-              راجعت مرشّحات التشابه، والحقيقة مستقلة فعلًا
-            </label>
-          </div>
-          <div className="review-list">
-            {overview?.candidates.map((c: any) => (
-              <article className="setup-panel" key={c.id}>
-                <div className="panel-title">
-                  <h2>{c.payload.text}</h2>
-                  <span className="status-badge">
-                    {c.status === "review"
-                      ? "مراجعة"
-                      : c.status === "approved"
-                        ? "معتمد"
-                        : c.status === "duplicate"
-                          ? "مكرّر"
-                          : "مرفوض"}
-                  </span>
-                </div>
-                <p>
-                  <strong>الإجابة:</strong> {c.payload.answer}
-                </p>
-                <p>{c.payload.explanation}</p>
-                <p className="muted">
-                  الصعوبة: {difficulties.find(([value])=>value===c.payload.difficulty)?.[1] || c.payload.difficulty}
-                  {" · "}النوع: {({text:"نص",choice:"اختيارات",ordering:"ترتيب",word:"كلمة",image:"صورة",audio:"صوت",video:"فيديو"} as Record<string,string>)[c.payload.format] || c.payload.format}
-                </p>
-                <code>{c.fact_key}</code>
-                {["review","duplicate"].includes(c.status) && <Button secondary disabled={busy} onClick={()=>{setDraftId(c.id);setDraftRevision(c.revision);setDraftJson(JSON.stringify(c.payload,null,2));window.scrollTo({top:0,behavior:"smooth"});}}>تعديل المسودة</Button>}
-                {c.payload.media && <figure className="question-media">
-                  {c.payload.format === "image" ? <img src={`/api/admin/media/${c.payload.media.assetId}`} alt={c.payload.media.alt} />
-                    : c.payload.format === "audio" ? <audio controls preload="none" aria-label={c.payload.media.alt} src={`/api/admin/media/${c.payload.media.assetId}`} />
-                    : <video controls muted playsInline preload="none" aria-label={c.payload.media.alt} src={`/api/admin/media/${c.payload.media.assetId}`} />}
-                  <figcaption>{c.payload.media.transcript}</figcaption>
-                </figure>}
-                {c.payload.sources?.map((s: any) => (
-                  <p key={s.url}>
-                    <a href={s.url} target="_blank" rel="noopener noreferrer">
-                      {s.url}
-                    </a>{" "}
-                    — {s.citation}
-                  </p>
-                ))}
-                {c.payload.deterministic && (
-                  <p>دليل قابل للتحقّق: {c.payload.fact}</p>
-                )}
-                {c.duplicates.length > 0 && (
-                  <details>
-                    <summary>
-                      أسئلة قد تختبر الحقيقة نفسها ({c.duplicates.length})
-                    </summary>
-                    {c.duplicates.map((d: any) => (
-                      <p key={d.id}>
-                        {d.text} — {d.answer} ({Math.round(d.score * 100)}%)
-                      </p>
-                    ))}
-                  </details>
-                )}
-                {c.status === "review" && (
-                  <div className="actions">
-                    <Button
-                      disabled={
-                        busy ||
-                        note.trim().length < 12 ||
-                        (c.duplicates.length > 0 && !reviewed)
-                      }
-                      onClick={() =>
-                        run(async () => {
-                          if (
-                            await confirm(
-                              "اعتماد هذا السؤال للمكتبة العامة؟ تأكّد من صحة المصادر واستقلال الحقيقة.",
-                            )
-                          ) {
-                            await api("/admin/candidates/" + c.id + "/review", {
-                              action: "approve",
-                              verificationNote: note,
-                              expectedRevision:c.revision,
-                              duplicateReviewed: reviewed,
-                            });
-                            await load();
-                          }
-                        })
-                      }
-                    >
-                      اعتماد
-                    </Button>
-                    <Button
-                      secondary
-                      disabled={busy || note.trim().length < 12}
-                      onClick={() =>
-                        run(async () => {
-                          await api("/admin/candidates/" + c.id + "/review", {
-                            action: "reject",
-                            verificationNote: note,
-                            expectedRevision:c.revision,
-                          });
-                          await load();
-                        })
-                      }
-                    >
-                      رفض
-                    </Button>
-                  </div>
-                )}
-              </article>
-            ))}
-          </div>
-          {overview && !overview.candidates.length && (
-            <Empty>
-              قائمة المراجعة فارغة. استورد أسئلة أو شغّل مهمة توليد.
-            </Empty>
+          {draftId && (
+            <div className="setup-panel draft-editor">
+              <h2>تعديل المسودة قبل الاعتماد</h2>
+              <p>
+                تُعاد مراجعة التشابه بعد الحفظ. حدّد الفئة والصعوبة في بطاقة
+                المراجعة قبل اتخاذ القرار.
+              </p>
+              {(() => {
+                try {
+                  const draft = JSON.parse(draftJson);
+                  return (
+                    <div className="draft-fields">
+                      {[
+                        ["text", "نص السؤال"],
+                        ["answer", "الإجابة الصحيحة"],
+                        ["explanation", "شرح الإجابة"],
+                        ["hint", "التلميح"],
+                      ].map(([field, title]) => (
+                        <label key={field}>
+                          {title}
+                          <textarea
+                            value={draft[field] || ""}
+                            onChange={(e) =>
+                              setDraftJson(
+                                JSON.stringify(
+                                  { ...draft, [field]: e.target.value },
+                                  null,
+                                  2,
+                                ),
+                              )
+                            }
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  );
+                } catch {
+                  return null;
+                }
+              })()}
+              <details>
+                <summary>تفاصيل متقدمة (JSON)</summary>
+                <label htmlFor="candidate-draft">محتوى المسودة</label>
+                <textarea
+                  id="candidate-draft"
+                  dir="ltr"
+                  className="json-input"
+                  value={draftJson}
+                  onChange={(e) => setDraftJson(e.target.value)}
+                />
+              </details>
+              <label>
+                سبب تعديل المسودة
+                <textarea
+                  value={note}
+                  onChange={(e) => setNote(e.target.value)}
+                  minLength={12}
+                  placeholder="اشرح التعديل الذي أجريته وسبب الحاجة إليه."
+                />
+              </label>
+              <div className="actions">
+                <Button
+                  disabled={busy || note.trim().length < 12}
+                  onClick={() =>
+                    run(async () => {
+                      await api(`/admin/candidates/${draftId}/edit`, {
+                        candidate: JSON.parse(draftJson),
+                        reason: note,
+                        expectedRevision: draftRevision,
+                      });
+                      setDraftId("");
+                      setDraftJson("");
+                      setNote("");
+                      setReviewVersion((v) => v + 1);
+                      await load();
+                    })
+                  }
+                >
+                  حفظ المسودة
+                </Button>
+                <Button
+                  secondary
+                  disabled={busy}
+                  onClick={() => setDraftId("")}
+                >
+                  إلغاء التعديل
+                </Button>
+              </div>
+            </div>
           )}
+          <ReviewQueue
+            key={reviewVersion}
+            categories={overview?.inventory || []}
+            run={run}
+            busy={busy}
+            confirm={confirm}
+            onChanged={load}
+            onEdit={(c) => {
+              setDraftId(c.id);
+              setDraftRevision(c.revision);
+              setDraftJson(JSON.stringify(c.payload, null, 2));
+              setNote("");
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }}
+          />
         </>
       )}
       {tab === "questions" && (
@@ -2218,10 +2525,10 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
               <article className="setup-panel" key={q.id}>
                 <div className="panel-title">
                   <h2>{q.text}</h2>
-                  <span>{q.status}</span>
+                  <span>{labelFor(statusLabels, q.status)}</span>
                 </div>
                 <p>
-                  {q.answer} · {q.difficulty}
+                  {q.answer} · {labelFor(difficultyLabels, q.difficulty)}
                 </p>
                 <code>{q.fact_key}</code>
                 {q.status === "approved" && (
@@ -2250,7 +2557,11 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
                       secondary
                       onClick={() =>
                         run(async () => {
-                          if (await confirm("إحالة السؤال للتقاعد نهائيًا؟")) {
+                          if (
+                            await confirm(
+                              "إيقاف هذا السؤال نهائيًا ومنعه من الظهور في ألعاب جديدة؟",
+                            )
+                          ) {
                             await api("/admin/questions/" + q.id + "/status", {
                               status: "retired",
                               reason: "Retired by editor after review",
@@ -2260,7 +2571,7 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
                         })
                       }
                     >
-                      تقاعد
+                      إيقاف نهائي
                     </Button>
                   </div>
                 )}
@@ -2273,7 +2584,7 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
         <>
           <MediaUploader run={run} busy={busy} />
           <div className="setup-panel">
-            <h2>مهمة توليد خلفية</h2>
+            <h2>توليد أسئلة للمراجعة</h2>
             <div className="setup-filters">
               <label>
                 الفئة
@@ -2309,7 +2620,7 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
                 })
               }
             >
-              أضف مهمة للمراجعة <Plus size={17} />
+              اطلب اقتراحات أسئلة <Plus size={17} />
             </Button>
             <p className="muted">
               المولّد الحسابي متاح للألغاز فقط. يعمل العامل بأمر npm run worker.
@@ -2353,7 +2664,7 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
               </Button>
               <a href="/api/admin/export" className="text-button" download>
                 <Download size={16} />
-                تصدير المرشّحات
+                تنزيل مسودات الأسئلة
               </a>
             </div>
           </div>
@@ -2387,11 +2698,38 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
       )}
       {tab === "metrics" && (
         <>
-          <div className="setup-panel"><h2>طلبات محتوى جديد</h2>
-            {overview?.replenishment.length ? overview.replenishment.map((r:any)=><div className="report-row" key={r.category_id+":"+r.difficulty+":"+r.region}>
-              <span>{r.name} · {r.difficulty} · {r.region}</span>
-              <Button secondary disabled={busy} onClick={()=>run(async()=>{await api("/admin/replenishment/resolve",{categoryId:r.category_id,difficulty:r.difficulty,region:r.region});await load();})}>تمّت متابعة الطلب</Button>
-            </div>) : <p>لا توجد طلبات معلّقة.</p>}
+          <div className="setup-panel">
+            <h2>طلبات محتوى جديد</h2>
+            {overview?.replenishment.length ? (
+              overview.replenishment.map((r: any) => (
+                <div
+                  className="report-row"
+                  key={r.category_id + ":" + r.difficulty + ":" + r.region}
+                >
+                  <span>
+                    {r.name} · {r.difficulty} · {r.region}
+                  </span>
+                  <Button
+                    secondary
+                    disabled={busy}
+                    onClick={() =>
+                      run(async () => {
+                        await api("/admin/replenishment/resolve", {
+                          categoryId: r.category_id,
+                          difficulty: r.difficulty,
+                          region: r.region,
+                        });
+                        await load();
+                      })
+                    }
+                  >
+                    تمّت متابعة الطلب
+                  </Button>
+                </div>
+              ))
+            ) : (
+              <p>لا توجد طلبات معلّقة.</p>
+            )}
           </div>
           <div className="setup-panel">
             <h2>استخدام المنصّة وجودة المحتوى</h2>
@@ -2413,7 +2751,8 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
               {metrics?.games.map((g: any) => (
                 <div key={g.mode + g.status}>
                   <strong>
-                    {g.mode} · {g.status}
+                    {labelFor(modeLabels, g.mode)} ·{" "}
+                    {labelFor(statusLabels, g.status)}
                   </strong>
                   <span>{g.count} لعبة</span>
                 </div>
@@ -2459,7 +2798,7 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
                   {overview?.jobs.map((j: any) => (
                     <tr key={j.id}>
                       <td>{j.category_id}</td>
-                      <td>{j.status}</td>
+                      <td>{labelFor(statusLabels, j.status)}</td>
                       <td>{j.attempts}</td>
                       <td>{j.cost_cents} سنت</td>
                       <td>{j.error || "—"}</td>
@@ -2474,7 +2813,7 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
             {overview?.reports.map((r: any) => (
               <div key={r.id} className="report-row">
                 <p>
-                  {r.reason} — {r.status}
+                  {r.reason} — {labelFor(statusLabels, r.status)}
                 </p>
                 {r.status === "open" && (
                   <Button
@@ -2511,14 +2850,15 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
         <div className="setup-panel">
           <h2>المستخدمون والصلاحيات</h2>
           <p>
-            اللاعب يشارك فقط، المحرّر يدير المحتوى، والمدير يدير الوصول. كل
-            تغيير يُسجّل في التدقيق.
+            اللاعب يشارك في الألعاب، والمحرّر يضيف الأسئلة ويراجعها، والمدير
+            يدير المحتوى وصلاحيات المستخدمين. تُحفظ تغييرات الصلاحيات في سجلّ
+            التدقيق.
           </p>
           {access.map((u: any) => (
             <div key={u.id} className="report-row">
               <div>
                 <strong>{u.username}</strong>
-                <p>{u.role}</p>
+                <p>{labelFor(roleLabels, u.role)}</p>
               </div>
               <div className="actions">
                 {["player", "editor", "admin"].map((role) => (
@@ -2530,7 +2870,7 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
                       run(async () => {
                         if (
                           !(await confirm(
-                            `تغيير صلاحية ${u.username} إلى ${role}؟`,
+                            `تغيير صلاحية ${u.username} إلى ${labelFor(roleLabels, role)}؟`,
                           ))
                         )
                           return;
@@ -2563,21 +2903,91 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
     </section>
   );
 }
-function MediaUploader({run,busy}:Pick<Context,"run"|"busy">) {
-  const [file,setFile]=useState<File|null>(null),[credit,setCredit]=useState(""),[license,setLicense]=useState(""),[source,setSource]=useState(""),[assetId,setAssetId]=useState("");
-  return <form className="setup-panel" onSubmit={e=>{e.preventDefault();run(async()=>{
-    if(!file) return;
-    const response=await fetch("/api/admin/media",{method:"POST",headers:{"Content-Type":file.type === "audio/x-wav" ? "audio/wav" : file.type,"X-Nabeeh-Request":"1","X-Media-Credit":encodeURIComponent(credit),"X-Media-License":encodeURIComponent(license),...(source?{"X-Media-Source":encodeURIComponent(source)}:{})},body:file});
-    const data=await response.json();if(!response.ok)throw new Error(data.message || "تعذّر رفع الملف.");setAssetId(data.id);
-  });}}>
-    <h2>وسائط مرخّصة للسؤال</h2><p>للملفات الجديدة، جهّز تخزين الوسائط أولًا. وسائط الحزمة الأصلية جاهزة للمراجعة. أضف بديلًا نصّيًا للصوت والفيديو في مسودة السؤال.</p>
-    <label>ملف الوسائط<input type="file" required accept="image/png,image/jpeg,image/webp,audio/wav,audio/ogg,video/mp4,video/webm" onChange={e=>setFile(e.target.files?.[0] || null)} /><small>الحد الأقصى ١٠ ميغابايت.</small></label>
-    <label>صاحب العمل أو بيان الإسناد<input required minLength={3} value={credit} onChange={e=>setCredit(e.target.value)} /></label>
-    <label>الترخيص وإذن الاستخدام<input required minLength={3} value={license} onChange={e=>setLicense(e.target.value)} /></label>
-    <label>رابط المصدر<input type="url" dir="ltr" value={source} onChange={e=>setSource(e.target.value)} /></label>
-    <Button type="submit" disabled={busy || !file}>رفع الوسائط</Button>
-    {assetId && <p>معرّف الوسائط لإضافته إلى المسودة: <code dir="ltr">{assetId}</code></p>}
-  </form>;
+function MediaUploader({ run, busy }: Pick<Context, "run" | "busy">) {
+  const [file, setFile] = useState<File | null>(null),
+    [credit, setCredit] = useState(""),
+    [license, setLicense] = useState(""),
+    [source, setSource] = useState(""),
+    [assetId, setAssetId] = useState("");
+  return (
+    <form
+      className="setup-panel"
+      onSubmit={(e) => {
+        e.preventDefault();
+        run(async () => {
+          if (!file) return;
+          const response = await fetch("/api/admin/media", {
+            method: "POST",
+            headers: {
+              "Content-Type":
+                file.type === "audio/x-wav" ? "audio/wav" : file.type,
+              "X-Nabeeh-Request": "1",
+              "X-Media-Credit": encodeURIComponent(credit),
+              "X-Media-License": encodeURIComponent(license),
+              ...(source
+                ? { "X-Media-Source": encodeURIComponent(source) }
+                : {}),
+            },
+            body: file,
+          });
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.message || "تعذّر رفع الملف.");
+          setAssetId(data.id);
+        });
+      }}
+    >
+      <h2>وسائط مرخّصة للسؤال</h2>
+      <p>
+        للملفات الجديدة، جهّز تخزين الوسائط أولًا. وسائط الحزمة الأصلية جاهزة
+        للمراجعة. أضف بديلًا نصّيًا للصوت والفيديو في مسودة السؤال.
+      </p>
+      <label>
+        ملف الوسائط
+        <input
+          type="file"
+          required
+          accept="image/png,image/jpeg,image/webp,audio/wav,audio/ogg,video/mp4,video/webm"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+        />
+        <small>الحد الأقصى ١٠ ميغابايت.</small>
+      </label>
+      <label>
+        صاحب المحتوى أو اسم الجهة المنتجة
+        <input
+          required
+          minLength={3}
+          value={credit}
+          onChange={(e) => setCredit(e.target.value)}
+        />
+      </label>
+      <label>
+        الترخيص وإذن الاستخدام
+        <input
+          required
+          minLength={3}
+          value={license}
+          onChange={(e) => setLicense(e.target.value)}
+        />
+      </label>
+      <label>
+        رابط المصدر
+        <input
+          type="url"
+          dir="ltr"
+          value={source}
+          onChange={(e) => setSource(e.target.value)}
+        />
+      </label>
+      <Button type="submit" disabled={busy || !file}>
+        رفع الوسائط
+      </Button>
+      {assetId && (
+        <p>
+          معرّف الوسائط لإضافته إلى المسودة: <code dir="ltr">{assetId}</code>
+        </p>
+      )}
+    </form>
+  );
 }
 function Privacy() {
   return (
@@ -2589,7 +2999,7 @@ function Privacy() {
       </p>
       <h2>ضيف أم حساب؟</h2>
       <p>
-        ملف الضيف يرتبط بملف ارتباط HTTP-only في هذا المتصفح لمدة ١٨٠ يومًا.
+        ملف الضيف يرتبط بملف تعريف ارتباط آمن في هذا المتصفح لمدة ١٨٠ يومًا.
         البيانات على الخادم لا تُحذف تلقائيًا عند انتهاء الجلسة. إنشاء حساب يحفظ
         الوصول عبر الأجهزة. حذف بيانات المتصفح قد يفقد الضيف الوصول إلى السجلّ.
         أسماء اللاعبين في الإعداد بيانات عرض ولا تربط حساباتهم.

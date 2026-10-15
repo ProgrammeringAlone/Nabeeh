@@ -892,3 +892,52 @@ test("Media byte identity defeats copied asset IDs, and changed drafts invalidat
   const triangle=(await pool.query("SELECT id FROM questions WHERE fact_key='triangle:sides'")).rows[0];
   await assert.rejects(()=>transaction(db=>verifyCanonical(db,triangle.id,actor,[],"Arithmetic cannot verify an unrelated geometric assertion.","3+0=3")),(e:any)=>e.code==="EVIDENCE_REQUIRED");
 });
+
+test("Ranked team assignments require accounts linked before play and preserve token order", async () => {
+  const guest = await profile(), host = await profile("account"), teammate = await profile("account");
+  for (const p of [host,teammate]) {
+    const id=randomUUID();
+    await pool.query("INSERT INTO users(id,profile_id,username,password_hash) VALUES($1,$2,$3,$4)",[id,p,"teams_"+id.slice(0,8),hashPassword("team linkage test password")]);
+  }
+  const unranked=await game.createGame(guest,{...setup(),hostTeam:1});
+  assert.equal((await pool.query("SELECT team_index FROM game_participants WHERE game_id=$1 AND profile_id=$2",[unranked.id,guest])).rows[0].team_index,null);
+  await game.abandon(unranked.id,guest);
+  const token="team-membership-"+randomUUID();
+  await pool.query("INSERT INTO participant_tokens(token_hash,profile_id,expires_at) VALUES($1,$2,now()+interval '10 minutes')",[tokenHash(token),teammate]);
+  const linked=await game.createGame(host,{...setup(),hostTeam:1,participantTokens:[token],participantTeams:[0]});
+  const assignments=new Map((await pool.query("SELECT profile_id,team_index FROM game_participants WHERE game_id=$1",[linked.id])).rows.map(p=>[p.profile_id,p.team_index]));
+  assert.equal(assignments.get(host),1);assert.equal(assignments.get(teammate),0);
+  assert.equal(game.setupSchema.safeParse({...setup(),participantTokens:[token],participantTeams:[]}).success,false);
+  assert.equal(game.setupSchema.safeParse({...setup(),teamNames:["الصُّقور","الصقور"]}).success,false);
+  await game.abandon(linked.id,host);
+});
+
+test("Original submitted puzzles stay pending and human approval stores their proof", async()=>{
+  const {submitQuestion}=await import("../server/submissions.ts");
+  const p=await profile("account"),actor=randomUUID();
+  await pool.query("INSERT INTO users(id,profile_id,username,password_hash,role) VALUES($1,$2,$3,$4,'editor')",[actor,p,"manual_"+actor.slice(0,8),hashPassword("manual original editorial test")]);
+  const suffix=randomUUID();
+  const submitted=await submitQuestion({text:"في هذا اللغز الأصلي للاختبار، كم عنصرًا نعدّ؟ "+suffix,answer:"7",explanation:"عدّدت العناصر الأصلية واحدًا واحدًا وتحققت من أن العدد سبعة.",hint:"عدّ كل عنصر مرة واحدة.",categoryIds:["logic"],difficulty:"medium",format:"text",evidenceKind:"original",fact:"دليل الحل الأصلي: سبعة عناصر موضّحة في اللغز "+suffix,provenance:"أعددت لغز العد الأصلي بنفسي وراجعت الحل."},actor);
+  assert.equal(submitted.status,"review");
+  assert.equal((await pool.query("SELECT 1 FROM questions WHERE id=$1",[submitted.id])).rowCount,0);
+  await transaction(db=>publishCandidate(db,submitted.id,actor,"راجعت الدليل وعدّ العناصر، وتحققت من سلامة الحل وأصل السؤال.",true,1));
+  const proof=(await pool.query("SELECT url,citation,verification_method FROM evidence WHERE question_id=$1",[submitted.id])).rows[0];
+  assert.equal(proof.url,null);assert.equal(proof.verification_method,"editorial-original");
+  assert.match(proof.citation,/سبعة عناصر/);
+  assert.equal((await pool.query("SELECT deterministic FROM candidates, jsonb_to_record(payload) AS x(deterministic boolean) WHERE id=$1",[submitted.id])).rows[0].deterministic,false);
+});
+
+test("Background reads do not reissue fresh session cookies across an authentication rotation", async()=>{
+  const {identity}=await import("../server/auth.ts"),p=await profile();
+  const token="rotation-race-"+randomUUID();
+  await pool.query("INSERT INTO sessions(token_hash,profile_id,expires_at) VALUES($1,$2,now()+interval '180 days')",[tokenHash(token),p]);
+  const cookies:unknown[]=[];
+  const req:any={headers:{cookie:"nabeeh_session="+token}};
+  const res:any={cookie:(...args:unknown[])=>cookies.push(args)};
+  let error:unknown;
+  await identity(req,res,e=>{error=e;});
+  assert.equal(error,undefined);assert.equal(req.identity.profileId,p);assert.equal(cookies.length,0);
+  await pool.query("UPDATE sessions SET expires_at=now()+interval '178 days' WHERE token_hash=$1",[tokenHash(token)]);
+  await identity(req,res,e=>{error=e;});assert.equal(error,undefined);assert.equal(cookies.length,1);
+  await identity(req,res,e=>{error=e;});assert.equal(cookies.length,1);
+});

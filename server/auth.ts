@@ -10,13 +10,15 @@ import { promisify } from "node:util";
 const derive = promisify(scrypt);
 export async function hashPasswordAsync(password: string) {
   const salt = randomBytes(16).toString("hex");
-  const key = await derive(password, salt, 64) as Buffer;
+  const key = (await derive(password, salt, 64)) as Buffer;
   return salt + ":" + key.toString("hex");
 }
 export async function checkPasswordAsync(password: string, hash: string) {
   const [salt, key] = hash.split(":");
-  const actual = await derive(password, salt, 64) as Buffer;
-  return key?.length === 128 && timingSafeEqual(actual, Buffer.from(key, "hex"));
+  const actual = (await derive(password, salt, 64)) as Buffer;
+  return (
+    key?.length === 128 && timingSafeEqual(actual, Buffer.from(key, "hex"))
+  );
 }
 import type { Request, Response, NextFunction } from "express";
 import { pool, transaction, AppError } from "./db.ts";
@@ -81,11 +83,13 @@ export async function identity(
       : { rows: [] };
     if (rows.length) {
       req.identity = { ...rows[0], role: rows[0].role || "guest" };
-      await pool.query(
-        "UPDATE sessions SET expires_at=now()+interval '180 days' WHERE token_hash=$1 AND expires_at < now()+interval '179 days'",
+      const renewed = await pool.query(
+        "UPDATE sessions SET expires_at=now()+interval '180 days' WHERE token_hash=$1 AND expires_at < now()+interval '179 days' RETURNING profile_id",
         [tokenHash(token!)],
       );
-      res.cookie("nabeeh_session", token, {
+      // Ordinary reads must not reissue an old token after an overlapping login
+      // rotates it. Renew the browser credential only when its expiry changed.
+      if (renewed.rowCount) res.cookie("nabeeh_session", token, {
         httpOnly: true,
         secure: process.env.COOKIE_SECURE === "true",
         sameSite: "lax",
@@ -157,6 +161,14 @@ export async function mergeProfiles(guest: string, target: string) {
       guest,
       target,
     ]);
+    // Guest history remains linked, without inventing ranked team assignments.
+    await db.query(
+      "INSERT INTO game_participants(game_id,profile_id,team_index) SELECT game_id,$2,NULL FROM game_participants WHERE profile_id=$1 ON CONFLICT(game_id,profile_id) DO NOTHING",
+      [guest, target],
+    );
+    await db.query("DELETE FROM game_participants WHERE profile_id=$1", [
+      guest,
+    ]);
     await db.query("DELETE FROM sessions WHERE profile_id=$1", [guest]);
   });
 }
@@ -185,7 +197,11 @@ export async function updateRole(
       actor,
     ]);
     if (operator?.role !== "admin")
-      throw new AppError(403, "ADMIN_REQUIRED", "إدارة الوصول للمدير فقط.");
+      throw new AppError(
+        403,
+        "ADMIN_REQUIRED",
+        "تعديل صلاحيات المستخدمين متاح للمدير فقط.",
+      );
     const {
       rows: [user],
     } = await db.query("SELECT role FROM users WHERE id=$1 FOR UPDATE", [

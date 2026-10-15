@@ -1,6 +1,8 @@
-# Delivery status — 2026-10-14
+# Delivery status — 2026-10-15
 
-Nabeeh is deployed at [nabeeh-web.onrender.com](https://nabeeh-web.onrender.com) using the free Render + Neon pilot. Hosted HTTPS, database APIs, secure sessions, account recovery and three responsive viewports passed smoke checks. The owner has accessed the editor, which showed all 36 release drafts pending review. Question approval is underway. Hosted classic and rapid word games passed with six distinct questions, refresh, scoring retries and cross-browser resume; the temporary test account was deleted.
+Nabeeh is deployed at [nabeeh-web.onrender.com](https://nabeeh-web.onrender.com) using the free Render + Neon pilot. Hosted HTTPS, database APIs, secure sessions, account recovery and three responsive viewports passed smoke checks. The owner has accessed the editor and question approval is underway. The last verified public inventory was nine published questions; a current inventory refresh was blocked by the provider incident. Hosted classic and rapid word games passed with six distinct questions, refresh, scoring retries and cross-browser resume; the temporary test account was deleted.
+
+The latest upload/review/suggestion/leaderboard update is implemented in the launch branch. Its hosted rollout has not been verified: Render reports free-service deployments paused during its incident, and the public health check most recently returned 502.
 
 ## Implemented
 
@@ -8,8 +10,10 @@ Nabeeh is deployed at [nabeeh-web.onrender.com](https://nabeeh-web.onrender.com)
 - HTTP-only guest/account sessions, asynchronous scrypt, cross-device account history, consent-based participants, export/deletion and single-use private recovery keys.
 - Canonical IDs and permanent exposure exclusion across modes/categories; sorted participant locks, atomic reservations, indexed bounded selection and matching for overlapping pools. Display records exposure; score retries remain idempotent.
 - Text, choice, ordering, word, image, audio and video question presentation. Choice/order responses persist. Protected media supports byte ranges and equivalents; answers/aliases/order solutions stay hidden until reveal.
+- Guided text/picture/audio/video submission, private durable media uploads, card-local review notes, paginated pending/history queues and atomic admin category/difficulty decisions.
 - Editorial JSON import, draft editing with visible difficulty/type and revision checks, exact/structured/media-byte duplicate signals, indexed lexical retrieval, human approval, canonical corrections, source verification, retirement, media previews, audit and admin access controls.
 - Durable arithmetic/model jobs, budgets, lease tokens rejecting stale workers, replenishment requests and an event-driven embedded worker for the free pilot. Generated content always waits for review.
+- Explainable editorial recommendations from approved metadata and decisions, targeted generation using private reviewed examples, and opt-in player/team leaderboards with explicit pre-game team linking.
 - Optional shared Redis quotas, verified database TLS, bounded connection pools/timeouts, conditional pgvector HNSW indexing and private S3-compatible upload interfaces.
 - Free Render Blueprint, Node 24 Docker image, isolated database checks, GitHub CI workflow, tested installation and deployment/recovery runbooks.
 
@@ -20,15 +24,15 @@ The finite pack contains 36 original drafts: six each image, audio, video, order
 | Check | Observed result | Scope |
 | --- | --- | --- |
 | Locked installation, migrations, draft preparation and TypeScript/Vite build | Passed | Existing local checkout/database |
-| PostgreSQL integration suite | 28 passed, no failures/skips | Isolated real database |
-| Chromium browser suite | 21 passed | Desktop 1440×1000, tablet 820×1180, mobile 390×844 |
+| PostgreSQL integration suite | 45 passed, no failures/skips; includes private uploads, original proof, suggestion targets, leaderboard privacy and session-cookie renewal | Isolated real databases |
+| Chromium browser suite | 42 passed; guided upload/retry, original proof, review classification/history/concurrency, suggestions and leaderboard privacy included | Desktop 1440×1000, tablet 820×1180, mobile 390×844 |
 | Browser gameplay/content/accessibility | Complete games, reload, accounts/recovery, editor edit/approve/access, six formats and protected media; no axe violations in tested screens | Automated checks plus screenshot inspection, not a complete human accessibility audit |
 | Concurrent game workload | 30 players, 60 completed games, 900 requests, 0 failures; p50 16 ms, p95 37 ms | Local isolated DB, concurrency 10; no hosted capacity guarantee |
 | Shared rate limits | Two separate app processes shared one real Redis quota; fourth request blocked after three allowed | Local Redis |
 | Semantic index | Real pgvector/HNSW nearest-neighbor and query-plan check passed with 80 synthetic fixtures | No live Arabic provider/recall evaluation |
 | Backup restoration | Consistent real PostgreSQL snapshot restored with matching records and exposure digest | Isolated local destination |
 | Runtime dependency audit | 0 reported vulnerabilities | Check time; not a security certification |
-| Production Docker runtime | Fresh schema, 36 pending drafts/18 media assets, compiled RTL frontend, secure sessions and nonroot process | Local container |
+| Production Docker runtime | Fresh schema, 36 pending drafts/18 media assets, compiled RTL frontend, secure cookie attributes, nonroot process; real production CSP permits image/audio/video previews, private database uploads and byte ranges | Isolated local container/loopback browser probe; not hosted HTTPS verification |
 | Hosted deployment smoke | HTTPS/database/API healthy, secure cookies, registration/recovery/login/export/deletion passed; no failed resources or page errors at three viewports | Temporary test accounts deleted; hosted word games passed, media gameplay awaits those packs being approved |
 
 Research covers rendered public pages at all six supplied origins, with desktop/mobile captures and public navigation. Your explicit platform-CA authorization resolved the browser trust block. Login, checkout, live scoring persistence and paid flows remain untested where unavailable without an account/payment; see research.md. No proprietary question bank was imported.
@@ -48,3 +52,5 @@ The cloud installation/startup configuration is saved separately for environment
 Migration 014 corrects only untouched pending starter arithmetic drafts, retaining their IDs, status and answers and incrementing review revisions. Approved or already edited drafts retain their editorial decisions. Difficulty is an editorial judgment; the corrected pack retains two questions per level per category for a small pilot.
 
 Category availability now counts unseen and unreserved questions at each difficulty. Mixed setup and the homepage demonstration require a fresh question at every required level; incomplete categories are excluded from default/random selection. Browser checks cover partial publication and a pool whose remaining questions lack an easy level. Atomic server selection remains authoritative for concurrent/shared-participant changes.
+
+See [editorial-features.md](editorial-features.md) for the new publishing workflow, storage cap, recommendation behavior and public leaderboard rules. Live model calls remain disabled under the free budget.
