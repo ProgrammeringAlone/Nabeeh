@@ -3,7 +3,7 @@ import { z } from "zod";
 import type pg from "pg";
 import { transaction, AppError } from "./db.ts";
 import { factSignature } from "./semantic.ts";
-import { mediaSchema } from "./media.ts";
+import { mediaSchema, answerMediaSchema } from "./media.ts";
 export function normalizeArabic(value: string): string {
   return value
     .normalize("NFKC")
@@ -165,6 +165,7 @@ export const candidateSchema = z
       .max(8)
       .optional(),
     media: mediaSchema.optional(),
+    answerMedia: answerMediaSchema.optional(),
     region: z.enum(["all", "sa", "kw", "ae", "bh", "qa", "om"]).default("all"),
     tags: z.array(z.string()).max(12).default([]),
     sources: z
@@ -229,6 +230,23 @@ export const candidateSchema = z
       });
   });
 export type Candidate = z.infer<typeof candidateSchema>;
+async function validateAnswerMedia(
+  db: Pick<pg.PoolClient, "query">,
+  c: Pick<Candidate, "answerMedia">,
+) {
+  if (!c.answerMedia) return;
+  const {
+    rows: [asset],
+  } = await db.query("SELECT mime FROM media_assets WHERE id=$1", [
+    c.answerMedia.assetId,
+  ]);
+  if (!asset || !asset.mime.startsWith("image/"))
+    throw new AppError(
+      400,
+      "ANSWER_MEDIA_INVALID",
+      "أرفق صورة موجودة لعرض الإجابة الصحيحة.",
+    );
+}
 export function similarity(a: string, b: string) {
   const x = new Set(normalizeArabic(a).split(" ")),
     y = new Set(normalizeArabic(b).split(" "));
@@ -243,6 +261,7 @@ export async function ingestWith(
   c: Candidate,
   existingId?: string,
 ) {
+  await validateAnswerMedia(db, c);
   if (
     (
       await db.query("SELECT id FROM categories WHERE id=ANY($1::text[])", [
@@ -414,6 +433,7 @@ export async function insertQuestion(
   id: string = randomUUID(),
   actor: string | null = null,
 ) {
+  await validateAnswerMedia(db, c);
   if (c.media) {
     const {
       rows: [asset],
@@ -455,13 +475,15 @@ export async function insertQuestion(
     factSignature(c),
   ]);
   await db.query(
-    "UPDATE questions SET media_id=$2,media_alt=$3,media_transcript=$4,ordering_answer=$5 WHERE id=$1",
+    "UPDATE questions SET media_id=$2,media_alt=$3,media_transcript=$4,ordering_answer=$5,answer_media_id=$6,answer_media_alt=$7 WHERE id=$1",
     [
       id,
       c.media?.assetId ?? null,
       c.media?.alt ?? null,
       c.media?.transcript ?? null,
       c.orderingAnswer ? JSON.stringify(c.orderingAnswer) : null,
+      c.answerMedia?.assetId ?? null,
+      c.answerMedia?.alt ?? null,
     ],
   );
   for (const cat of c.categoryIds)

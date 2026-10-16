@@ -38,6 +38,10 @@ export type ReviewCandidate = {
       license?: string;
       source?: string;
     };
+    answerMedia?: {
+      assetId: string;
+      alt: string;
+    };
     sources?: { url: string; citation: string }[];
     evidenceKind?: "factual" | "original";
     provenance?: string;
@@ -151,6 +155,7 @@ function ReviewCard({
     (!matches.length || duplicateReviewed);
   const canReject = editable && validClassification && validNote;
   const media = candidate.payload.media;
+  const answerMedia = candidate.payload.answerMedia;
   const statusName =
     candidate.status === "approved"
       ? "معتمد"
@@ -198,7 +203,7 @@ function ReviewCard({
       </h2>
       {media &&
         ["image", "audio", "video"].includes(candidate.payload.format) && (
-          <figure className="rq-media">
+          <figure className="rq-media" aria-label="وسائط السؤال">
             {candidate.payload.format === "image" ? (
               <img
                 src={`/api/admin/media/${encodeURIComponent(media.assetId)}`}
@@ -235,8 +240,22 @@ function ReviewCard({
             )}
           </figure>
         )}
+      {answerMedia && (
+        <figure
+          className="rq-media rq-answer-media"
+          aria-labelledby={`${fieldId}-answer-image`}
+        >
+          <figcaption id={`${fieldId}-answer-image`}>صورة الإجابة</figcaption>
+          <img
+            data-testid="review-answer-image"
+            src={`/api/admin/media/${encodeURIComponent(answerMedia.assetId)}`}
+            alt={answerMedia.alt}
+            loading="lazy"
+          />
+        </figure>
+      )}
       <div className="rq-answer">
-        <span>الإجابة الصحيحة</span>
+        <span>{answerMedia ? "المرجع النصي للإجابة" : "الإجابة الصحيحة"}</span>
         <strong>{candidate.payload.answer}</strong>
       </div>
       {candidate.payload.aliases?.length ? (

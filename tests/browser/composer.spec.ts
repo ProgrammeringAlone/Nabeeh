@@ -135,6 +135,226 @@ async function cleanup(
   await db.end();
 }
 
+test("Question and answer images upload independently, survive a failed save, and preview separately in review", async ({
+  page,
+}, testInfo) => {
+  const { db, username } = await editor(page);
+  const text = `أي صورة تكمل النمط في سؤال الاختبار ${randomUUID()}؟`;
+  const questionCredit = `صاحب صورة السؤال ${randomUUID()}`;
+  const answerCredit = `صاحب صورة الحل ${randomUUID()}`;
+  const mediaIds: string[] = [];
+  const png = Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
+    "base64",
+  );
+  let uploads = 0,
+    failed = false;
+  page.on("request", (request) => {
+    if (
+      request.url().endsWith("/api/admin/media") &&
+      request.method() === "POST"
+    )
+      uploads++;
+  });
+  await page.route("**/api/admin/submissions", async (route) => {
+    if (!failed) {
+      failed = true;
+      await route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({
+          message: "تعذّر حفظ السؤال مؤقتًا. حاول مرة أخرى.",
+        }),
+      });
+    } else await route.continue();
+  });
+  try {
+    const composer = page.locator(".question-composer");
+    await composer
+      .getByRole("button", {
+        name: "صورة صورة تساعد على حل السؤال",
+        exact: true,
+      })
+      .click();
+    await composer
+      .getByLabel("اختر ملف الوسائط", { exact: true })
+      .setInputFiles({
+        name: "question.png",
+        mimeType: "image/png",
+        buffer: png,
+      });
+    await composer
+      .getByRole("textbox", {
+        name: "صاحب المحتوى أو اسم الجهة المنتجة",
+        exact: true,
+      })
+      .fill(questionCredit);
+    await composer
+      .getByRole("checkbox", {
+        name: "أؤكد أن لدي حق نشر هذا الملف واستخدامه في اللعبة.",
+        exact: true,
+      })
+      .check();
+    await fillOriginal(page, text);
+    await composer
+      .getByRole("group", { name: "نوع الإجابة", exact: true })
+      .getByRole("button", { name: "صورة", exact: true })
+      .click();
+    const picker = composer.getByTestId("answer-image-picker");
+    await picker
+      .getByLabel("اختر صورة الإجابة", { exact: true })
+      .setInputFiles({
+        name: "answer.txt",
+        mimeType: "text/plain",
+        buffer: Buffer.from("invalid image"),
+      });
+    await expect(composer.getByRole("alert")).toHaveText(
+      "اختر صورة إجابة بصيغة PNG أو JPG أو WebP.",
+    );
+    await picker
+      .getByLabel("اختر صورة الإجابة", { exact: true })
+      .setInputFiles({
+        name: "answer.png",
+        mimeType: "image/png",
+        buffer: png,
+      });
+    await expect
+      .poll(() =>
+        picker
+          .getByTestId("answer-image-preview")
+          .locator("img")
+          .evaluate((node: HTMLImageElement) => node.naturalWidth),
+      )
+      .toBe(1);
+    await picker
+      .getByRole("textbox", {
+        name: "صاحب صورة الإجابة أو الجهة المنتجة",
+        exact: true,
+      })
+      .fill(answerCredit);
+    await picker
+      .getByRole("checkbox", {
+        name: "أؤكد أن لدي حق نشر صورة الإجابة واستخدامها في اللعبة.",
+        exact: true,
+      })
+      .check();
+    await expect(
+      composer.getByRole("textbox", { name: "نص السؤال", exact: true }),
+    ).toHaveCount(1);
+    await page.screenshot({
+      path: `test-results/answer-image-composer-${testInfo.project.name}.png`,
+      fullPage: true,
+    });
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    await composer
+      .getByRole("button", { name: "إرسال السؤال للمراجعة", exact: true })
+      .click();
+    await expect(composer.getByRole("alert")).toHaveText(
+      "تعذّر حفظ السؤال مؤقتًا. حاول مرة أخرى.",
+    );
+    const assets = (
+      await db.query(
+        "SELECT id,credit FROM media_assets WHERE credit=ANY($1::text[])",
+        [[questionCredit, answerCredit]],
+      )
+    ).rows;
+    mediaIds.push(...assets.map((asset) => asset.id));
+    expect(mediaIds).toHaveLength(2);
+    expect(uploads).toBe(2);
+    await expect(picker.getByText(/صورة الإجابة محفوظة/)).toBeVisible();
+    await composer
+      .getByRole("button", { name: "إرسال السؤال للمراجعة", exact: true })
+      .click();
+    await expect
+      .poll(
+        async () =>
+          (
+            await db.query(
+              "SELECT count(*)::int AS n FROM candidates WHERE payload->>'text'=$1",
+              [text],
+            )
+          ).rows[0].n,
+      )
+      .toBe(1);
+    expect(uploads).toBe(2);
+    const candidate = (
+      await db.query(
+        "SELECT status,payload FROM candidates WHERE payload->>'text'=$1",
+        [text],
+      )
+    ).rows[0];
+    const questionId = assets.find(
+      (asset) => asset.credit === questionCredit,
+    )!.id;
+    const answerId = assets.find((asset) => asset.credit === answerCredit)!.id;
+    expect(candidate.status).toBe("review");
+    expect(candidate.payload.media.assetId).toBe(questionId);
+    expect(candidate.payload.answerMedia).toEqual({
+      assetId: answerId,
+      alt: "صورة الإجابة الصحيحة",
+    });
+    expect(answerId).not.toBe(questionId);
+    expect(
+      (await db.query("SELECT 1 FROM questions WHERE text=$1", [text]))
+        .rowCount,
+    ).toBe(0);
+    await page
+      .getByRole("button", { name: "مراجعة المحتوى", exact: true })
+      .click();
+    const card = page
+      .locator(".rq-card")
+      .filter({ has: page.getByRole("heading", { name: text, exact: true }) });
+    await expect(card.getByTestId("review-answer-image")).toHaveAttribute(
+      "src",
+      `/api/admin/media/${answerId}`,
+    );
+    await expect
+      .poll(() =>
+        card
+          .getByTestId("review-answer-image")
+          .evaluate((node: HTMLImageElement) => node.naturalWidth),
+      )
+      .toBe(1);
+    await expect(
+      card.locator(".rq-media").first().locator("img"),
+    ).toHaveAttribute("src", `/api/admin/media/${questionId}`);
+    await expect(
+      card.getByText("المرجع النصي للإجابة", { exact: true }),
+    ).toBeVisible();
+    expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    // The same licensed answer asset can be reused without uploading a third file.
+    await page.getByRole("button", { name: "إضافة سؤال", exact: true }).click();
+    await composer
+      .getByRole("button", { name: "نص سؤال مكتوب وإجابة واضحة", exact: true })
+      .click();
+    await composer
+      .getByRole("group", { name: "نوع الإجابة", exact: true })
+      .getByRole("button", { name: "صورة", exact: true })
+      .click();
+    await picker
+      .getByRole("button", { name: "صورة من المكتبة", exact: true })
+      .click();
+    await picker
+      .getByRole("combobox", { name: "صورة الإجابة المحفوظة", exact: true })
+      .selectOption(answerId);
+    await expect(
+      picker.getByTestId("answer-image-preview").locator("img"),
+    ).toHaveAttribute("src", `/api/admin/media/${answerId}`);
+    expect(uploads).toBe(2);
+    await picker
+      .getByRole("button", { name: "إزالة صورة الإجابة", exact: true })
+      .click();
+    await expect(picker.getByTestId("answer-image-preview")).toHaveCount(0);
+  } finally {
+    await cleanup(db, username, [text], mediaIds);
+  }
+});
+
 test("The guided composer requires a type and explicit category/difficulty; original evidence stays pending human review", async ({
   page,
 }, testInfo) => {

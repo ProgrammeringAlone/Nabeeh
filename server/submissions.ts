@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { digest, candidateSchema, ingestWith } from "./content.ts";
-import { mediaSchema } from "./media.ts";
+import { mediaSchema, answerMediaSchema } from "./media.ts";
 import { transaction } from "./db.ts";
 
 const submissionSchema = z
@@ -34,6 +34,7 @@ const submissionSchema = z
     evidenceKind: z.enum(["factual", "original"]).default("factual"),
     fact: z.string().trim().min(12).max(1000).optional(),
     media: mediaSchema.partial({ alt: true }).optional(),
+    answerMedia: answerMediaSchema.partial({ alt: true }).optional(),
   })
   .strict()
   .superRefine((v, ctx) => {
@@ -64,6 +65,14 @@ export async function submitQuestion(input: unknown, actor: string) {
   const canonical = digest(fact + " " + v.answer);
   const candidate = candidateSchema.parse({
     ...v,
+    ...(v.answerMedia
+      ? {
+          answerMedia: {
+            ...v.answerMedia,
+            alt: v.answerMedia.alt?.trim() || "صورة الإجابة الصحيحة",
+          },
+        }
+      : {}),
     ...(v.media
       ? {
           media: {

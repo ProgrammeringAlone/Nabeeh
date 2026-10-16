@@ -8,6 +8,8 @@ Factual questions require a specific HTTPS source and the passage supporting the
 
 Pictures accept PNG/JPEG/WebP, audio accepts WAV/OGG/MP3 and video accepts MP4/WebM. Files have a 10 MiB maximum. The UI supports selecting or dropping a file, local previews, licensed/owned-content declarations and reuse from the private media library. Audio/video do not autoplay. Enter one main question. Optional accessibility descriptions and text equivalents are available in collapsed details; they are not separate questions. When omitted, the submission endpoint assigns a generic media label instead of copying the question. If submission fails after uploading, retry reuses that asset and preserves the question fields.
 
+Choose **نوع الإجابة → صورة** for a visual solution. Upload a separate PNG/JPEG/WebP image or reuse a licensed picture from the private library. The question and answer images have independent previews and rights declarations. Keep a short textual answer for editorial identity and duplicate checks; the game displays the answer image as the solution, with the explanation in collapsed details. The review card shows both images. The answer asset and its metadata remain unavailable to players until **اكشف الإجابة**, including direct requests to its protected game URL. Text answers continue to work without any extra upload.
+
 Configured private S3-compatible storage is preferred. Without it, private PostgreSQL blob storage makes the free pilot functional. `MEDIA_DATABASE_BUDGET_BYTES` defaults to 104857600 (100 MiB), is enforced atomically, and can be set to 0 to stop new database uploads while keeping existing assets readable. This is a bounded pilot option; use object storage for a substantial media library. Uploaded files survive Render restarts. Ownership, authorization, immutable SHA identity and byte-range checks apply to both stores.
 
 ## Review
@@ -39,6 +41,7 @@ Team identities combine the host profile and normalized team name, keeping ident
 - `POST /api/admin/submissions`: guided question submission; editor/admin only.
 - `GET /api/admin/media`: private paginated media metadata, filtered by format.
 - `POST /api/admin/media`: private validated upload.
+- `GET /api/games/:id/answer-media/:instanceId`: host-only answer image, available after reveal with private byte-range delivery.
 - `GET /api/admin/review-queue`: status/category/difficulty filters and pagination.
 - `POST /api/admin/candidates/:id/review`: revision-checked decision with category/difficulty choices.
 - `GET /api/admin/suggestions`: editor-only recommendation targets and provider readiness.

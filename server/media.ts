@@ -17,6 +17,8 @@ export const mediaSchema = z
     transcript: z.string().max(2000).optional(),
   })
   .strict();
+// Answer images have their own reveal boundary; they never share the stimulus route.
+export const answerMediaSchema = mediaSchema.pick({ assetId: true, alt: true });
 const objectStore =
   process.env.MEDIA_BUCKET &&
   process.env.MEDIA_ACCESS_KEY_ID &&
@@ -298,6 +300,18 @@ export async function serveGameMedia(req: Request, res: Response) {
     rows: [asset],
   } = await pool.query(
     "SELECT a.* FROM games g JOIN game_questions i ON i.game_id=g.id JOIN questions q ON q.id=i.question_id JOIN media_assets a ON a.id=q.media_id WHERE g.id=$1 AND g.host_id=$2 AND i.id=$3 AND i.status IN('open','revealed','completed')",
+    [gameId, req.identity.profileId, instanceId],
+  );
+  if (!asset) throw new AppError(404, "MEDIA_NOT_FOUND", "الوسائط غير متاحة.");
+  await serveAsset(asset, req, res);
+}
+export async function serveGameAnswerMedia(req: Request, res: Response) {
+  const gameId = z.uuid().parse(req.params.id),
+    instanceId = z.uuid().parse(req.params.instanceId);
+  const {
+    rows: [asset],
+  } = await pool.query(
+    "SELECT a.* FROM games g JOIN game_questions i ON i.game_id=g.id JOIN questions q ON q.id=i.question_id JOIN media_assets a ON a.id=q.answer_media_id WHERE g.id=$1 AND g.host_id=$2 AND i.id=$3 AND i.status IN('revealed','completed') AND a.mime LIKE 'image/%'",
     [gameId, req.identity.profileId, instanceId],
   );
   if (!asset) throw new AppError(404, "MEDIA_NOT_FOUND", "الوسائط غير متاحة.");

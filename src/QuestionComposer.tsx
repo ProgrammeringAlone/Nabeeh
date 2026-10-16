@@ -14,6 +14,9 @@ import {
   X,
 } from "lucide-react";
 import "./question-composer.css";
+import AnswerImagePicker, {
+  type AnswerImagePickerHandle,
+} from "./AnswerImagePicker";
 
 type QuestionFormat = "text" | "image" | "audio" | "video";
 type Asset = {
@@ -103,6 +106,9 @@ export default function QuestionComposer({
   const id = useId(),
     fileInput = useRef<HTMLInputElement>(null),
     errorRef = useRef<HTMLDivElement>(null);
+  const answerImagePicker = useRef<AnswerImagePickerHandle>(null);
+  const [answerType, setAnswerType] = useState<"text" | "image">("text");
+  const [answerPickerKey, setAnswerPickerKey] = useState(0);
   const [format, setFormat] = useState<QuestionFormat | null>(null);
   const [text, setText] = useState(""),
     [answer, setAnswer] = useState(""),
@@ -164,6 +170,8 @@ export default function QuestionComposer({
     setTranscript("");
     setError("");
     setSuccess("");
+    setAnswerType("text");
+    setAnswerPickerKey((value) => value + 1);
   }, [initialTarget]);
 
   useEffect(() => {
@@ -235,6 +243,8 @@ export default function QuestionComposer({
     setSuccess("");
   }
   function reset() {
+    setAnswerType("text");
+    setAnswerPickerKey((value) => value + 1);
     setFormat(null);
     setText("");
     setAnswer("");
@@ -320,6 +330,13 @@ export default function QuestionComposer({
         setUploadedAsset(kept);
         mediaId = uploaded.id;
       }
+      let answerMedia;
+      if (answerType === "image") {
+        setStage("uploading");
+        if (!answerImagePicker.current)
+          throw new Error("أضف صورة الإجابة قبل إرسال السؤال.");
+        answerMedia = await answerImagePicker.current.prepare();
+      }
       setStage("submitting");
       await request("/api/admin/submissions", {
         method: "POST",
@@ -330,6 +347,7 @@ export default function QuestionComposer({
         body: JSON.stringify({
           text: text.trim(),
           answer: answer.trim(),
+          ...(answerMedia ? { answerMedia } : {}),
           explanation: explanation.trim(),
           hint: hint.trim(),
           categoryIds: [categoryId],
@@ -765,6 +783,39 @@ export default function QuestionComposer({
               هذا هو السؤال الوحيد الذي يظهر للاعبين، وتظهر الصورة أو المقطع معه
               عند إرفاقه.
             </small>
+            <div
+              className="qc-answer-type"
+              role="group"
+              aria-labelledby={`${id}-answer-type`}
+            >
+              <h4 id={`${id}-answer-type`}>نوع الإجابة</h4>
+              <div className="qc-media-tabs">
+                <button
+                  type="button"
+                  aria-pressed={answerType === "text"}
+                  className={answerType === "text" ? "selected" : ""}
+                  onClick={() => setAnswerType("text")}
+                >
+                  <FileText size={17} aria-hidden="true" /> نص
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={answerType === "image"}
+                  className={answerType === "image" ? "selected" : ""}
+                  onClick={() => setAnswerType("image")}
+                >
+                  <Image size={17} aria-hidden="true" /> صورة
+                </button>
+              </div>
+            </div>
+            {answerType === "image" && (
+              <AnswerImagePicker
+                key={answerPickerKey}
+                ref={answerImagePicker}
+                busy={busy}
+                onError={reportError}
+              />
+            )}
             <div className="qc-grid">
               <label htmlFor={`${id}-answer`}>
                 الإجابة الصحيحة
@@ -774,8 +825,21 @@ export default function QuestionComposer({
                   onChange={(event) => setAnswer(event.target.value)}
                   required
                   maxLength={300}
-                  placeholder="الإجابة الأساسية"
+                  placeholder={
+                    answerType === "image"
+                      ? "اسم الإجابة أو مرجع مختصر للصورة"
+                      : "الإجابة الأساسية"
+                  }
+                  aria-describedby={
+                    answerType === "image" ? `${id}-answer-help` : undefined
+                  }
                 />
+                {answerType === "image" && (
+                  <small id={`${id}-answer-help`}>
+                    مرجع نصّي قصير للمحرّر والتحقّق من التكرار. تظهر الصورة
+                    للاعبين عند كشف الإجابة.
+                  </small>
+                )}
               </label>
               <label htmlFor={`${id}-hint`}>
                 تلميح مساعد

@@ -32,6 +32,7 @@ import {
 } from "./game.ts";
 import {
   serveGameMedia,
+  serveGameAnswerMedia,
   serveEditorMedia,
   mediaBody,
   uploadMedia,
@@ -57,6 +58,7 @@ export const api = Router();
 api.use(identity);
 api.use(limiter("profile"));
 api.get("/games/:id/media/:instanceId", serveGameMedia);
+api.get("/games/:id/answer-media/:instanceId", serveGameAnswerMedia);
 api.post("/games/:id/response", async (req, res) =>
   res.json(
     await respond(

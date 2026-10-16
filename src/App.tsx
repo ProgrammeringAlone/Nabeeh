@@ -117,6 +117,11 @@ type Game = {
     media_credit: string | null;
     media_license: string | null;
     media_source: string | null;
+    answer_media_id: string | null;
+    answer_media_alt: string | null;
+    answer_media_credit: string | null;
+    answer_media_license: string | null;
+    answer_media_source: string | null;
   };
   serverTime: number;
 };
@@ -1788,16 +1793,50 @@ function GameView({
             <>
               <div className="answer">
                 <span>الإجابة الصحيحة</span>
-                <h2 data-testid="answer-text">{q.answer}</h2>
-                {q.accepted_answers?.some((a) => a !== q.answer) && (
-                  <p>
-                    تُقبل أيضًا:{" "}
-                    {q.accepted_answers
-                      .filter((a) => a !== q.answer)
-                      .join("، ")}
-                  </p>
+                {q.answer_media_id ? (
+                  <>
+                    <figure className="answer-media">
+                      <img
+                        data-testid="answer-image"
+                        src={`/api/games/${game.id}/answer-media/${q.id}`}
+                        alt={q.answer_media_alt || "صورة الإجابة الصحيحة"}
+                      />
+                      <figcaption>
+                        {q.answer_media_credit} · {q.answer_media_license}
+                        {q.answer_media_source && (
+                          <>
+                            {" "}
+                            ·{" "}
+                            <a
+                              href={q.answer_media_source}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              مصدر الصورة
+                            </a>
+                          </>
+                        )}
+                      </figcaption>
+                    </figure>
+                    <details className="answer-explanation">
+                      <summary>شرح الإجابة</summary>
+                      <p>{q.explanation}</p>
+                    </details>
+                  </>
+                ) : (
+                  <>
+                    <h2 data-testid="answer-text">{q.answer}</h2>
+                    {q.accepted_answers?.some((a) => a !== q.answer) && (
+                      <p>
+                        تُقبل أيضًا:{" "}
+                        {q.accepted_answers
+                          .filter((a) => a !== q.answer)
+                          .join("، ")}
+                      </p>
+                    )}
+                    <p>{q.explanation}</p>
+                  </>
                 )}
-                <p>{q.explanation}</p>
               </div>
               <div className="score-actions">
                 <Button

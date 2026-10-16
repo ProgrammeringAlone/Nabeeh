@@ -193,6 +193,16 @@
   color: #6b7469;
   margin-top: 6px;
 }
+.rq-answer-media {
+  background: #f0f4e9;
+  border-color: #dce3d4;
+}
+.rq-answer-media > figcaption {
+  margin: 0 0 12px;
+  color: #204b3e;
+  font-size: 15px;
+  font-weight: 700;
+}
 .rq-answer {
   display: flex;
   align-items: center;
