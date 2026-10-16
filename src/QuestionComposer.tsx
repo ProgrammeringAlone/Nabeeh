@@ -354,7 +354,7 @@ export default function QuestionComposer({
             ? {
                 media: {
                   assetId: mediaId,
-                  alt: alt.trim(),
+                  ...(alt.trim() ? { alt: alt.trim() } : {}),
                   ...(transcript.trim()
                     ? { transcript: transcript.trim() }
                     : {}),
@@ -620,40 +620,45 @@ export default function QuestionComposer({
                     <figcaption>معاينة الملف قبل إرساله</figcaption>
                   </figure>
                 )}
-                <label htmlFor={`${id}-alt`}>
-                  وصف الوسائط
-                  <input
-                    id={`${id}-alt`}
-                    value={alt}
-                    onChange={(event) => setAlt(event.target.value)}
-                    required
-                    minLength={5}
-                    maxLength={500}
-                    placeholder={
-                      format === "image"
-                        ? "صف العناصر المهمة لفهم الصورة"
-                        : "وصف موجز لما يحتويه المقطع"
-                    }
-                  />
-                  <small>اكتب وصفًا واضحًا يساعد من يستخدم قارئ الشاشة.</small>
-                </label>
-                {(format === "audio" || format === "video") && (
-                  <label htmlFor={`${id}-transcript`}>
-                    النص البديل للمقطع
-                    <textarea
-                      id={`${id}-transcript`}
-                      value={transcript}
-                      onChange={(event) => setTranscript(event.target.value)}
-                      required
+                <details className="qc-extras qc-accessibility">
+                  <summary>إمكانية الوصول (اختياري)</summary>
+                  <p>
+                    أضف وصفًا يساعد من يستخدم قارئ الشاشة أو بديلًا للمقطع عند
+                    الحاجة. نص السؤال أدناه هو السؤال الذي يظهر أثناء اللعب.
+                  </p>
+                  <label htmlFor={`${id}-alt`}>
+                    وصف إضافي لقارئ الشاشة (اختياري)
+                    <input
+                      id={`${id}-alt`}
+                      value={alt}
+                      onChange={(event) => setAlt(event.target.value)}
                       minLength={5}
-                      maxLength={2000}
-                      placeholder="اكتب الكلام المسموع ووصف الأحداث أو الأصوات المهمة للسؤال"
+                      maxLength={500}
+                      placeholder={
+                        format === "image"
+                          ? "صف العناصر المهمة لفهم الصورة"
+                          : "وصف موجز لما يحتويه المقطع"
+                      }
                     />
-                    <small>
-                      يتيح فهم السؤال لمن لا يستطيع سماع المقطع أو مشاهدته.
-                    </small>
+                    <small>صف محتوى الملف بما يساعد على فهمه.</small>
                   </label>
-                )}
+                  {(format === "audio" || format === "video") && (
+                    <label htmlFor={`${id}-transcript`}>
+                      تفريغ المقطع أو وصف محتواه (اختياري)
+                      <textarea
+                        id={`${id}-transcript`}
+                        value={transcript}
+                        onChange={(event) => setTranscript(event.target.value)}
+                        minLength={5}
+                        maxLength={2000}
+                        placeholder="اكتب الكلام المسموع ووصف الأحداث أو الأصوات المهمة للسؤال"
+                      />
+                      <small>
+                        يتيح فهم السؤال لمن لا يستطيع سماع المقطع أو مشاهدته.
+                      </small>
+                    </label>
+                  )}
+                </details>
                 {mediaMode === "upload" && (
                   <div className="qc-rights">
                     <h4>
@@ -752,9 +757,14 @@ export default function QuestionComposer({
                 required
                 minLength={8}
                 maxLength={600}
+                aria-describedby={`${id}-question-help`}
                 placeholder="اكتب سؤالًا مباشرًا لا يحتمل أكثر من تفسير"
               />
             </label>
+            <small id={`${id}-question-help`}>
+              هذا هو السؤال الوحيد الذي يظهر للاعبين، وتظهر الصورة أو المقطع معه
+              عند إرفاقه.
+            </small>
             <div className="qc-grid">
               <label htmlFor={`${id}-answer`}>
                 الإجابة الصحيحة

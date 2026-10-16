@@ -39,6 +39,8 @@ test("All media formats, keyboard ordering and choice responses play, persist, a
       await page.locator(".question-media "+type).evaluate((element:HTMLMediaElement)=>element.play());
       await expect.poll(()=>page.locator(".question-media "+type).evaluate((element:HTMLMediaElement)=>element.currentTime)).toBeGreaterThan(0);
     }
+    await expect(page.getByTestId("question-text")).toHaveCount(1);
+    await expect(page.getByRole("heading",{name:opened.current.text,exact:true})).toHaveCount(1);
     if(["image","audio","video"].includes(type)) {
       const media=await page.request.get(`/api/games/${id}/media/${tile.id}`);expect(media.status()).toBe(200);expect((await media.body()).length).toBeGreaterThan(100);
       const range=await page.request.get(`/api/games/${id}/media/${tile.id}`,{headers:{Range:"bytes=0-31"}});expect(range.status()).toBe(206);expect((await range.body()).length).toBe(32);

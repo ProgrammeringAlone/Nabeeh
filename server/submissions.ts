@@ -33,7 +33,7 @@ const submissionSchema = z
     provenance: z.string().trim().min(12).max(500),
     evidenceKind: z.enum(["factual", "original"]).default("factual"),
     fact: z.string().trim().min(12).max(1000).optional(),
-    media: mediaSchema.optional(),
+    media: mediaSchema.partial({ alt: true }).optional(),
   })
   .strict()
   .superRefine((v, ctx) => {
@@ -64,6 +64,20 @@ export async function submitQuestion(input: unknown, actor: string) {
   const canonical = digest(fact + " " + v.answer);
   const candidate = candidateSchema.parse({
     ...v,
+    ...(v.media
+      ? {
+          media: {
+            ...v.media,
+            alt:
+              v.media.alt?.trim() ||
+              (v.format === "image"
+                ? "الصورة المرفقة بالسؤال"
+                : v.format === "audio"
+                  ? "المقطع الصوتي المرفق بالسؤال"
+                  : "الفيديو المرفق بالسؤال"),
+          },
+        }
+      : {}),
     fact,
     factKey: "editorial:" + canonical,
     subject: fact.slice(0, 200),

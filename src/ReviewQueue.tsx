@@ -222,7 +222,10 @@ function ReviewCard({
               />
             )}
             {(media.transcript || media.alt) && (
-              <figcaption>{media.transcript || media.alt}</figcaption>
+              <details>
+                <summary>معلومات إمكانية الوصول</summary>
+                <p>{media.transcript || media.alt}</p>
+              </details>
             )}
             {media.credit && (
               <small>

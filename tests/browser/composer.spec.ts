@@ -1,5 +1,6 @@
 import { test, expect, type Page } from "@playwright/test";
 import { randomUUID } from "node:crypto";
+import { readFile } from "node:fs/promises";
 import pg from "pg";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -302,9 +303,17 @@ test("A failed submission keeps uploaded media and inputs; retry reuses the file
           "base64",
         ),
       });
-    await composer
-      .getByRole("textbox", { name: /^وصف الوسائط/ })
-      .fill("صورة أصلية لاختبار رفع الملفات وحفظها.");
+    const accessibility = composer.locator("details").filter({
+      has: page.locator("summary", { hasText: "إمكانية الوصول (اختياري)" }),
+    });
+    await expect(accessibility).not.toHaveAttribute("open");
+    await expect(accessibility.locator("input")).not.toHaveAttribute(
+      "required",
+    );
+    await expect(accessibility.locator("input")).toHaveValue("");
+    await expect(
+      composer.getByRole("textbox", { name: /^وصف إضافي لقارئ الشاشة/ }),
+    ).toHaveCount(0);
     await expect
       .poll(() =>
         composer
@@ -374,6 +383,8 @@ test("A failed submission keeps uploaded media and inputs; retry reuses the file
     ).rows[0];
     expect(candidate.payload.media.assetId).toBe(uploaded.id);
     expect(candidate.payload.format).toBe("image");
+    expect(candidate.payload.media.alt).toBe("الصورة المرفقة بالسؤال");
+    expect(candidate.payload.media.alt).not.toBe(text);
     await page.getByRole("button", { name: "إضافة سؤال", exact: true }).click();
     await composer
       .getByRole("button", {
@@ -420,5 +431,134 @@ test("A failed submission keeps uploaded media and inputs; retry reuses the file
         ).rows.map((row) => row.id),
       );
     await cleanup(db, username, [text], mediaIds);
+  }
+});
+
+test("Audio and video drafts use one question prompt while optional accessibility fields can stay empty", async ({
+  page,
+}) => {
+  const { db, username } = await editor(page);
+  const texts: string[] = [];
+  try {
+    const releasePack = JSON.parse(
+      await readFile("media/release-pack.json", "utf8"),
+    ) as {
+      questions: {
+        format: string;
+        text: string;
+        answer: string;
+        explanation: string;
+        hint: string;
+        categoryIds: string[];
+        difficulty: string;
+        media?: { assetId: string };
+      }[];
+    };
+    for (const format of ["audio", "video"] as const) {
+      const fixture = releasePack.questions.find(
+        (question) => question.format === format,
+      )!;
+      expect(fixture?.media?.assetId).toBeTruthy();
+      expect(fixture.categoryIds.length).toBeGreaterThan(0);
+      const text = `${fixture.text} — اختبار المحرّر ${randomUUID()}`;
+      texts.push(text);
+      const composer = page.locator(".question-composer");
+      await page
+        .getByRole("button", { name: "إضافة سؤال", exact: true })
+        .click();
+      await composer
+        .getByRole("button", {
+          name:
+            format === "audio"
+              ? "صوت مقطع يستمع إليه اللاعب"
+              : "فيديو مقطع يشاهده اللاعب",
+          exact: true,
+        })
+        .click();
+      await composer
+        .getByRole("button", { name: "من مكتبة الوسائط", exact: true })
+        .click();
+      await composer
+        .getByRole("combobox", { name: "الملف المحفوظ", exact: true })
+        .selectOption(fixture.media!.assetId);
+      const accessibility = composer.locator("details").filter({
+        has: page.locator("summary", { hasText: "إمكانية الوصول (اختياري)" }),
+      });
+      await expect(accessibility).not.toHaveAttribute("open");
+      await expect(accessibility.locator("input")).not.toHaveAttribute(
+        "required",
+      );
+      await expect(accessibility.locator("textarea")).not.toHaveAttribute(
+        "required",
+      );
+      await expect(accessibility.locator("input")).toHaveValue("");
+      await expect(accessibility.locator("textarea")).toHaveValue("");
+      await expect(
+        composer.getByRole("textbox", { name: "نص السؤال", exact: true }),
+      ).toHaveCount(1);
+      await expect(
+        composer.getByRole("textbox", { name: /^وصف إضافي لقارئ الشاشة/ }),
+      ).toHaveCount(0);
+      await expect(
+        composer.getByRole("textbox", { name: /^تفريغ المقطع أو وصف محتواه/ }),
+      ).toHaveCount(0);
+      await fillOriginal(page, text);
+      await composer
+        .getByRole("textbox", { name: "الإجابة الصحيحة", exact: true })
+        .fill(fixture.answer);
+      await composer
+        .getByRole("textbox", { name: "شرح الإجابة", exact: true })
+        .fill(fixture.explanation);
+      await composer
+        .getByRole("textbox", { name: "تلميح مساعد", exact: true })
+        .fill(fixture.hint);
+      await composer
+        .getByRole("combobox", { name: "فئة السؤال", exact: true })
+        .selectOption(fixture.categoryIds[0]);
+      await composer
+        .getByRole("combobox", { name: "مستوى الصعوبة", exact: true })
+        .selectOption(fixture.difficulty);
+      await composer
+        .getByRole("textbox", { name: /^طريقة التحقّق أو الحلّ/ })
+        .fill(
+          `راجعت المقطع الأصلي وعددت الأحداث يدويًا: ${fixture.explanation} مرجع اختبار ${text}`,
+        );
+      await composer
+        .getByRole("button", { name: "إرسال السؤال للمراجعة", exact: true })
+        .click();
+      await expect
+        .poll(
+          async () =>
+            (
+              await db.query(
+                "SELECT count(*)::int AS count FROM candidates WHERE payload->>'text'=$1",
+                [text],
+              )
+            ).rows[0].count,
+        )
+        .toBe(1);
+      const candidate = (
+        await db.query(
+          "SELECT status,payload FROM candidates WHERE payload->>'text'=$1",
+          [text],
+        )
+      ).rows[0];
+      expect(candidate.status).toBe("review");
+      expect(candidate.payload.media.assetId).toBe(fixture.media!.assetId);
+      expect(candidate.payload.media.alt).toBe(
+        format === "audio"
+          ? "المقطع الصوتي المرفق بالسؤال"
+          : "الفيديو المرفق بالسؤال",
+      );
+      expect(candidate.payload.media.alt).not.toBe(text);
+      expect(candidate.payload.media.transcript || "").toBe("");
+      expect(candidate.payload.deterministic).toBe(false);
+      expect(
+        (await db.query("SELECT 1 FROM questions WHERE text=$1", [text]))
+          .rowCount,
+      ).toBe(0);
+    }
+  } finally {
+    await cleanup(db, username, texts);
   }
 });

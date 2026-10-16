@@ -1,8 +1,8 @@
-# Delivery status — 2026-10-15
+# Delivery status — 2026-10-16
 
 Nabeeh is deployed at [nabeeh-web.onrender.com](https://nabeeh-web.onrender.com) using the free Render + Neon pilot. Hosted HTTPS, database APIs, secure sessions, account recovery and three responsive viewports passed smoke checks. The owner has accessed the editor and question approval is underway. The last verified public inventory was nine published questions; a current inventory refresh was blocked by the provider incident. Hosted classic and rapid word games passed with six distinct questions, refresh, scoring retries and cross-browser resume; the temporary test account was deleted.
 
-The latest upload/review/suggestion/leaderboard update is implemented in the launch branch. Its hosted rollout has not been verified: Render reports free-service deployments paused during its incident, and the public health check most recently returned 502.
+The upload/review/suggestion/leaderboard release `ac0c20b` is deployed. Hosted checks confirmed healthy APIs, secure guest cookies, the new UI bundle, the public leaderboard and authorization on editorial routes. Render’s earlier incident was resolved.
 
 ## Implemented
 
@@ -25,7 +25,7 @@ The finite pack contains 36 original drafts: six each image, audio, video, order
 | --- | --- | --- |
 | Locked installation, migrations, draft preparation and TypeScript/Vite build | Passed | Existing local checkout/database |
 | PostgreSQL integration suite | 45 passed, no failures/skips; includes private uploads, original proof, suggestion targets, leaderboard privacy and session-cookie renewal | Isolated real databases |
-| Chromium browser suite | 42 passed; guided upload/retry, original proof, review classification/history/concurrency, suggestions and leaderboard privacy included | Desktop 1440×1000, tablet 820×1180, mobile 390×844 |
+| Chromium browser suite | 45 passed; guided upload/retry, original proof, review classification/history/concurrency, suggestions and leaderboard privacy included | Desktop 1440×1000, tablet 820×1180, mobile 390×844 |
 | Browser gameplay/content/accessibility | Complete games, reload, accounts/recovery, editor edit/approve/access, six formats and protected media; no axe violations in tested screens | Automated checks plus screenshot inspection, not a complete human accessibility audit |
 | Concurrent game workload | 30 players, 60 completed games, 900 requests, 0 failures; p50 16 ms, p95 37 ms | Local isolated DB, concurrency 10; no hosted capacity guarantee |
 | Shared rate limits | Two separate app processes shared one real Redis quota; fourth request blocked after three allowed | Local Redis |
@@ -54,3 +54,5 @@ Migration 014 corrects only untouched pending starter arithmetic drafts, retaini
 Category availability now counts unseen and unreserved questions at each difficulty. Mixed setup and the homepage demonstration require a fresh question at every required level; incomplete categories are excluded from default/random selection. Browser checks cover partial publication and a pool whose remaining questions lack an easy level. Atomic server selection remains authoritative for concurrent/shared-participant changes.
 
 See [editorial-features.md](editorial-features.md) for the new publishing workflow, storage cap, recommendation behavior and public leaderboard rules. Live model calls remain disabled under the free budget.
+
+Question submission now uses one primary prompt. Optional screen-reader descriptions/transcripts are collapsed under accessibility settings; image/audio/video drafts can be submitted without them, and media gameplay checks assert one question heading.
