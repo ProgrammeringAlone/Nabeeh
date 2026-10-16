@@ -259,11 +259,12 @@ test("An administrator classifies questions before deciding; decisions leave the
     expect(
       (
         await fixture.db.query(
-          "SELECT citation,verification_method FROM evidence WHERE question_id=$1",
+          "SELECT citation,verification_method FROM evidence WHERE question_id=$1 ORDER BY verification_method",
           [acceptedCandidate.id],
         )
       ).rows,
     ).toEqual([
+      { citation: verification, verification_method: "editorial-admin" },
       { citation: accepted.fact, verification_method: "editorial-original" },
     ]);
     expect(

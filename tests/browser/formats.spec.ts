@@ -3,8 +3,27 @@ import { readFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import pg from "pg";
 import AxeBuilder from "@axe-core/playwright";
-import { candidateSchema, insertQuestion } from "../../server/content.ts";
+import {
+  candidateSchema,
+  insertQuestion,
+  type OriginContext,
+} from "../../server/content.ts";
 const types = ["image", "audio", "video", "ordering", "word", "choice"];
+const creationKinds: Record<string, OriginContext["kind"]> = {
+  image: "admin",
+  audio: "ai",
+  video: "generator",
+  ordering: "unknown",
+  word: "admin",
+  choice: "ai",
+};
+const originLabels = {
+  admin: "Admin · مشرف",
+  ai: "AI · ذكاء اصطناعي",
+  generator: "توليد آلي",
+  unknown: "المنشئ غير معروف",
+};
+let creatorId: string, creatorUsername: string;
 const answerImageTypes = ["answer_image", "answer_text"];
 const categories: Record<string, string> = {};
 const answerFixtures: Record<
@@ -19,6 +38,19 @@ test.beforeAll(async () => {
     throw new Error("Format fixtures require the isolated browser-test runner");
   const db = new pg.Client({ connectionString: process.env.DATABASE_URL });
   await db.connect();
+  creatorId = randomUUID();
+  creatorUsername = ("format_author_" + randomUUID().replaceAll("-", "")).slice(
+    0,
+    30,
+  );
+  const creatorProfile = randomUUID();
+  await db.query("INSERT INTO profiles(id,kind) VALUES($1,'account')", [
+    creatorProfile,
+  ]);
+  await db.query(
+    "INSERT INTO users(id,profile_id,username,password_hash,role) VALUES($1,$2,$3,$4,'editor')",
+    [creatorId, creatorProfile, creatorUsername, "unused-format-fixture-hash"],
+  );
   const pack = JSON.parse(await readFile("media/release-pack.json", "utf8"));
   for (const type of types) {
     const cat = "fixture_" + type + "_" + randomUUID().slice(0, 8);
@@ -49,7 +81,14 @@ test.beforeAll(async () => {
           ? { options: [original.answer, "999", "1001"] }
           : {}),
       });
-      await insertQuestion(db, c);
+      const kind = creationKinds[type];
+      await insertQuestion(
+        db,
+        c,
+        randomUUID(),
+        creatorId,
+        kind === "admin" ? { kind, createdBy: creatorId } : { kind },
+      );
     }
   }
   for (const type of answerImageTypes) {
@@ -131,6 +170,19 @@ test("All media formats, keyboard ordering and choice responses play, persist, a
     await page.getByRole("button", { name: /200 نقطة$/ }).click();
     await expect(page.getByTestId("question-text")).toBeVisible();
     const opened = await (await page.request.get("/api/games/" + id)).json();
+    const kind = creationKinds[type];
+    expect(opened.current.creation_kind).toBe(kind);
+    expect(opened.current).not.toHaveProperty("created_by");
+    expect(opened.current).not.toHaveProperty("creator_username");
+    expect(opened.current).not.toHaveProperty("reviewed_by");
+    expect(JSON.stringify(opened)).not.toContain(creatorId);
+    expect(JSON.stringify(opened)).not.toContain(creatorUsername);
+    const origin = page.getByTestId("question-origin");
+    await expect(origin).toBeVisible();
+    await expect(origin).toHaveAttribute("data-origin", kind);
+    await expect(origin).toContainText(originLabels[kind]);
+    await expect(origin.locator(".question-origin-creator")).toHaveCount(0);
+    await expect(page.getByText(creatorUsername, { exact: true })).toHaveCount(0);
     expect(opened.current.answer).toBeNull();
     expect(opened.current.ordering_answer).toBeNull();
     if (type === "image")
@@ -213,6 +265,13 @@ test("All media formats, keyboard ordering and choice responses play, persist, a
     });
     await page.getByRole("button", { name: "اكشف الإجابة" }).click();
     await expect(page.getByTestId("answer-text")).toBeVisible();
+    await expect(origin).toHaveAttribute("data-origin", kind);
+    const revealed = await (await page.request.get("/api/games/" + id)).json();
+    expect(revealed.current.creation_kind).toBe(kind);
+    expect(revealed.current).not.toHaveProperty("created_by");
+    expect(revealed.current).not.toHaveProperty("creator_username");
+    expect(JSON.stringify(revealed)).not.toContain(creatorId);
+    expect(JSON.stringify(revealed)).not.toContain(creatorUsername);
     await page.request.post(`/api/games/${id}/abandon`, {
       headers: { "X-Nabeeh-Request": "1" },
       data: {},

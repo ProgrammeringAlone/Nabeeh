@@ -448,7 +448,7 @@ api.get("/admin/review-queue", async (req, res) => {
     "c.status=$1 AND ($2='' OR c.payload->'categoryIds' ? $2) AND ($3='' OR c.payload->>'difficulty'=$3)";
   const [items, total, counts] = await Promise.all([
     pool.query(
-      `SELECT c.*,COALESCE((SELECT json_agg(json_build_object('id',q.id,'text',q.text,'answer',q.answer,'score',d.score)) FROM duplicate_candidates d JOIN questions q ON q.id=d.question_id WHERE d.candidate_id=c.id),'[]') AS duplicates FROM candidates c WHERE ${where} ORDER BY c.created_at DESC,c.id LIMIT 12 OFFSET $4`,
+      `SELECT c.*,u.username AS creator_username,COALESCE((SELECT json_agg(json_build_object('id',q.id,'text',q.text,'answer',q.answer,'score',d.score)) FROM duplicate_candidates d JOIN questions q ON q.id=d.question_id WHERE d.candidate_id=c.id),'[]') AS duplicates FROM candidates c LEFT JOIN users u ON u.id=c.created_by WHERE ${where} ORDER BY c.created_at DESC,c.id LIMIT 12 OFFSET $4`,
       [...params, (filter.page - 1) * 12],
     ),
     pool.query(
@@ -534,7 +534,7 @@ api.get("/admin/overview", async (_req, res) => {
         "SELECT status,count(*)::int AS count FROM questions GROUP BY status",
       ),
       pool.query(
-        "SELECT c.*,COALESCE((SELECT json_agg(json_build_object('id',q.id,'text',q.text,'answer',q.answer,'score',d.score)) FROM duplicate_candidates d JOIN questions q ON q.id=d.question_id WHERE d.candidate_id=c.id),'[]') AS duplicates FROM candidates c ORDER BY created_at DESC LIMIT 100",
+        "SELECT c.*,u.username AS creator_username,COALESCE((SELECT json_agg(json_build_object('id',q.id,'text',q.text,'answer',q.answer,'score',d.score)) FROM duplicate_candidates d JOIN questions q ON q.id=d.question_id WHERE d.candidate_id=c.id),'[]') AS duplicates FROM candidates c LEFT JOIN users u ON u.id=c.created_by ORDER BY c.created_at DESC LIMIT 100",
       ),
       pool.query(
         "SELECT * FROM generation_jobs ORDER BY created_at DESC LIMIT 40",
@@ -567,7 +567,14 @@ api.get("/admin/overview", async (_req, res) => {
   });
 });
 api.post("/admin/candidates", async (req, res) => {
-  res.status(201).json(await ingest(req.body));
+  res
+    .status(201)
+    .json(
+      await ingest(req.body, {
+        kind: "admin",
+        createdBy: req.identity.userId!,
+      }),
+    );
 });
 api.post("/admin/candidates/:id/edit", async (req, res) => {
   const id = z.uuid().parse(req.params.id),
@@ -625,12 +632,15 @@ api.post("/admin/replenishment/resolve", async (req, res) => {
 api.post("/admin/import", async (req, res) => {
   const list = z.array(candidateSchema).min(1).max(100).parse(req.body);
   const results = [];
-  for (const c of list) results.push(await ingest(c));
+  for (const c of list)
+    results.push(
+      await ingest(c, { kind: "admin", createdBy: req.identity.userId! }),
+    );
   res.json(results);
 });
 api.get("/admin/export", async (_req, res) => {
   const { rows } = await pool.query(
-    "SELECT c.payload,c.status,c.verification_note FROM candidates c ORDER BY created_at",
+    "SELECT c.payload,c.status,c.verification_note,c.creation_kind,u.username AS creator_username FROM candidates c LEFT JOIN users u ON u.id=c.created_by ORDER BY c.created_at",
   );
   res.json(rows);
 });
@@ -771,7 +781,7 @@ api.get("/admin/questions", async (req, res) => {
     .max(100)
     .parse(req.query.q ?? "");
   const { rows } = await pool.query(
-    "SELECT id,text,answer,difficulty,status,verified_at,fact_key,development_only FROM questions WHERE text ILIKE $1 ORDER BY created_at DESC LIMIT 100",
+    "SELECT q.id,q.text,q.answer,q.difficulty,q.status,q.verified_at,q.fact_key,q.development_only,q.creation_kind,u.username AS creator_username FROM questions q LEFT JOIN users u ON u.id=q.created_by WHERE q.text ILIKE $1 ORDER BY q.created_at DESC LIMIT 100",
     ["%" + q + "%"],
   );
   res.json(rows);

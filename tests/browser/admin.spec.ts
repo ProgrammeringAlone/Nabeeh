@@ -80,6 +80,10 @@ test("Unauthorized admin access is blocked; editors review and publish persisten
     .locator("article")
     .filter({ has: page.getByRole("heading", { name: candidate.text }) });
   await expect(card).toBeVisible();
+  const origin = card.getByTestId("question-origin");
+  await expect(origin).toHaveAttribute("data-origin", "admin");
+  await expect(origin).toContainText("Admin · مشرف");
+  await expect(origin.locator(".question-origin-creator")).toHaveText(username);
   expect(
     (await db.query("SELECT 1 FROM questions WHERE fact_key=$1", [factKey]))
       .rowCount,
@@ -100,6 +104,8 @@ test("Unauthorized admin access is blocked; editors review and publish persisten
       exact: true,
     }),
   ).toHaveCount(0);
+  await expect(origin).toHaveAttribute("data-origin", "admin");
+  await expect(origin.locator(".question-origin-creator")).toHaveText(username);
   await card
     .getByLabel("ملاحظات المراجعة لهذا السؤال", { exact: true })
     .fill(
@@ -114,6 +120,8 @@ test("Unauthorized admin access is blocked; editors review and publish persisten
   await expect(card).toHaveCount(0);
   await page.getByRole("button", { name: /^المعتمدة/ }).click();
   await expect(card.getByText("معتمد", { exact: true })).toBeVisible();
+  await expect(origin).toHaveAttribute("data-origin", "admin");
+  await expect(origin.locator(".question-origin-creator")).toHaveText(username);
   expect(
     (
       await db.query(
@@ -127,6 +135,16 @@ test("Unauthorized admin access is blocked; editors review and publish persisten
     rows: [q],
   } = await db.query("SELECT id FROM questions WHERE fact_key=$1", [factKey]);
   await page.getByRole("button", { name: "المكتبة", exact: true }).click();
+  const libraryCard = page.locator(".review-list article").filter({
+    has: page.getByRole("heading", { name: candidate.text, exact: true }),
+  });
+  await expect(libraryCard.getByTestId("question-origin")).toHaveAttribute(
+    "data-origin",
+    "admin",
+  );
+  await expect(
+    libraryCard.getByTestId("question-origin").locator(".question-origin-creator"),
+  ).toHaveText(username);
   await page.getByLabel("بيانات التحقّق", { exact: true }).fill(
     JSON.stringify({
       id: q.id,

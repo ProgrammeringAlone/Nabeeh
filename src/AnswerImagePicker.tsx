@@ -6,20 +6,13 @@ import {
   useRef,
   useState,
 } from "react";
-import {
-  CheckCircle2,
-  Image,
-  Library,
-  ShieldCheck,
-  UploadCloud,
-  X,
-} from "lucide-react";
+import { CheckCircle2, Image, Library, UploadCloud, X } from "lucide-react";
 
 type ImageAsset = {
   id: string;
   mime: string;
-  credit: string;
-  license: string;
+  credit: string | null;
+  license: string | null;
   source?: string | null;
 };
 export type AnswerImageValue = { assetId: string; alt?: string };
@@ -56,11 +49,6 @@ const AnswerImagePicker = forwardRef<
   const [loadError, setLoadError] = useState("");
   const [reload, setReload] = useState(0);
   const [dragging, setDragging] = useState(false);
-  const [credit, setCredit] = useState("");
-  const [rights, setRights] = useState<"original" | "licensed">("original");
-  const [license, setLicense] = useState("");
-  const [source, setSource] = useState("");
-  const [confirmed, setConfirmed] = useState(false);
   const [alt, setAlt] = useState("");
   const imageUrl =
     mode === "library"
@@ -109,19 +97,10 @@ const AnswerImagePicker = forwardRef<
         if (mode === "library")
           throw new Error("اختر صورة الإجابة من المكتبة.");
         if (!file) throw new Error("أضف صورة الإجابة قبل إرسال السؤال.");
-        if (!confirmed) throw new Error("أكّد حقوق استخدام صورة الإجابة.");
-        const mediaLicense =
-          rights === "original"
-            ? "عمل أصلي — بإذن صاحب الحقوق للاستخدام في نبيه"
-            : license.trim();
         const headers: Record<string, string> = {
           "Content-Type": file.type,
           "X-Nabeeh-Request": "1",
-          "X-Media-Credit": encodeURIComponent(credit.trim()),
-          "X-Media-License": encodeURIComponent(mediaLicense),
         };
-        if (source.trim())
-          headers["X-Media-Source"] = encodeURIComponent(source.trim());
         const result = await request<{ id: string; mime: string }>(
           "/api/admin/media",
           {
@@ -132,9 +111,9 @@ const AnswerImagePicker = forwardRef<
         );
         asset = {
           ...result,
-          credit: credit.trim(),
-          license: mediaLicense,
-          source: source.trim() || null,
+          credit: null,
+          license: null,
+          source: null,
         };
         setUploaded(asset);
       }
@@ -289,8 +268,9 @@ const AnswerImagePicker = forwardRef<
                 <option value="">اختر صورة الإجابة</option>
                 {assets.map((asset, index) => (
                   <option key={asset.id} value={asset.id}>
-                    {asset.credit} · {asset.mime.split("/")[1].toUpperCase()} ·
-                    الصورة {index + 1}
+                    {asset.credit?.trim() || "صورة محفوظة"} ·{" "}
+                    {asset.mime.split("/")[1].toUpperCase()} · الصورة{" "}
+                    {index + 1}
                   </option>
                 ))}
               </select>
@@ -298,24 +278,6 @@ const AnswerImagePicker = forwardRef<
           ) : (
             <p>
               لا توجد صور محفوظة بعد. اختر «رفع صورة الإجابة» لإضافة صورة جديدة.
-            </p>
-          )}
-          {selected && (
-            <p className="qc-asset-credit">
-              {selected.credit} · {selected.license}
-              {selected.source && (
-                <>
-                  {" "}
-                  ·{" "}
-                  <a
-                    href={selected.source}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    مصدر صورة الإجابة
-                  </a>
-                </>
-              )}
             </p>
           )}
         </div>
@@ -347,87 +309,6 @@ const AnswerImagePicker = forwardRef<
           />
         </label>
       </details>
-      {mode === "upload" && (
-        <div className="qc-rights">
-          <h4>
-            <ShieldCheck size={17} aria-hidden="true" /> حقوق استخدام صورة
-            الإجابة
-          </h4>
-          <div className="qc-grid">
-            <label htmlFor={`${id}-rights`}>
-              مصدر حقوق صورة الإجابة
-              <select
-                id={`${id}-rights`}
-                disabled={!!uploaded || busy}
-                value={rights}
-                onChange={(event) => {
-                  setRights(event.target.value as "original" | "licensed");
-                  setConfirmed(false);
-                }}
-              >
-                <option value="original">صورة أصلية أملك حقوقها</option>
-                <option value="licensed">
-                  صورة لدي إذن أو ترخيص باستخدامها
-                </option>
-              </select>
-            </label>
-            <label htmlFor={`${id}-credit`}>
-              صاحب صورة الإجابة أو الجهة المنتجة
-              <input
-                id={`${id}-credit`}
-                value={credit}
-                disabled={!!uploaded || busy}
-                onChange={(event) => setCredit(event.target.value)}
-                required
-                minLength={3}
-                maxLength={500}
-                placeholder="اسم المصوّر، المؤلف، أو الجهة"
-              />
-            </label>
-          </div>
-          {rights === "licensed" && (
-            <div className="qc-grid">
-              <label htmlFor={`${id}-license`}>
-                ترخيص صورة الإجابة أو وصف الإذن
-                <input
-                  id={`${id}-license`}
-                  value={license}
-                  disabled={!!uploaded || busy}
-                  onChange={(event) => setLicense(event.target.value)}
-                  required
-                  minLength={3}
-                  maxLength={500}
-                  placeholder="مثل CC BY 4.0، أو إذن كتابي من صاحب الحقوق"
-                />
-              </label>
-              <label htmlFor={`${id}-source`}>
-                رابط مصدر صورة الإجابة
-                <input
-                  id={`${id}-source`}
-                  type="url"
-                  dir="ltr"
-                  value={source}
-                  disabled={!!uploaded || busy}
-                  onChange={(event) => setSource(event.target.value)}
-                  required
-                  pattern="https://.*"
-                  maxLength={2000}
-                  placeholder="https://…"
-                />
-              </label>
-            </div>
-          )}
-          <label className="qc-check">
-            <input
-              type="checkbox"
-              checked={confirmed}
-              onChange={(event) => setConfirmed(event.target.checked)}
-              required
-            />{" "}
-            أؤكد أن لدي حق نشر صورة الإجابة واستخدامها في اللعبة.
-          </label>
-        </div>
-      )}
     </div>
   );
 });

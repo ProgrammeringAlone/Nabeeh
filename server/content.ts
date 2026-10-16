@@ -230,6 +230,11 @@ export const candidateSchema = z
       });
   });
 export type Candidate = z.infer<typeof candidateSchema>;
+// Authorship comes from authenticated routes or worker code, never candidate JSON.
+export type OriginContext =
+  | { kind: "admin"; createdBy: string | null }
+  | { kind: "ai" | "generator" | "unknown"; createdBy?: null };
+const unknownOrigin: OriginContext = { kind: "unknown" };
 async function validateAnswerMedia(
   db: Pick<pg.PoolClient, "query">,
   c: Pick<Candidate, "answerMedia">,
@@ -252,14 +257,18 @@ export function similarity(a: string, b: string) {
     y = new Set(normalizeArabic(b).split(" "));
   return [...x].filter((t) => y.has(t)).length / new Set([...x, ...y]).size;
 }
-export async function ingest(input: unknown) {
+export async function ingest(
+  input: unknown,
+  origin: OriginContext = unknownOrigin,
+) {
   const c = candidateSchema.parse(input);
-  return transaction(async (db) => ingestWith(db, c));
+  return transaction(async (db) => ingestWith(db, c, undefined, origin));
 }
 export async function ingestWith(
   db: pg.PoolClient,
   c: Candidate,
   existingId?: string,
+  origin: OriginContext = unknownOrigin,
 ) {
   await validateAnswerMedia(db, c);
   if (
@@ -297,7 +306,7 @@ export async function ingestWith(
   );
   const duplicate = !!(obvious.rowCount || other.rowCount);
   await db.query(
-    "INSERT INTO candidates(id,payload,normalized_hash,fact_key,status,reason,fact_signature) VALUES($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(id) DO UPDATE SET payload=EXCLUDED.payload,normalized_hash=EXCLUDED.normalized_hash,fact_key=EXCLUDED.fact_key,status=EXCLUDED.status,reason=EXCLUDED.reason,fact_signature=EXCLUDED.fact_signature,revision=candidates.revision+1",
+    "INSERT INTO candidates(id,payload,normalized_hash,fact_key,status,reason,fact_signature,creation_kind,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9) ON CONFLICT(id) DO UPDATE SET payload=EXCLUDED.payload,normalized_hash=EXCLUDED.normalized_hash,fact_key=EXCLUDED.fact_key,status=EXCLUDED.status,reason=EXCLUDED.reason,fact_signature=EXCLUDED.fact_signature,revision=candidates.revision+1",
     [
       id,
       c,
@@ -306,6 +315,8 @@ export async function ingestWith(
       duplicate ? "duplicate" : "review",
       duplicate ? "exact-or-canonical-fact" : null,
       signature,
+      origin.kind,
+      origin.createdBy ?? null,
     ],
   );
   if (existingId) {
@@ -370,11 +381,13 @@ export async function publishCandidate(
       "تغيّرت المسودة. حدّث القائمة وأعد المراجعة قبل الاعتماد.",
     );
   const c = candidateSchema.parse(row.payload);
+  const manuallyEntered = row.creation_kind === "admin";
   const originalReviewed =
     c.evidenceKind === "original" &&
     c.fact.trim().length >= 12 &&
     c.provenance.trim().length >= 12;
   if (
+    !manuallyEntered &&
     !c.sources.length &&
     !originalReviewed &&
     (!c.deterministic || !verifyOriginalProof(c))
@@ -384,7 +397,7 @@ export async function publishCandidate(
       "EVIDENCE_REQUIRED",
       "أضف مصدرًا موثوقًا للإجابة، أو دليلًا واضحًا لحل اللغز الأصلي قبل الاعتماد.",
     );
-  if (c.sensitive && (c.sources.length < 2 || !c.expiresAt))
+  if (!manuallyEntered && c.sensitive && (c.sources.length < 2 || !c.expiresAt))
     throw new AppError(
       400,
       "CORROBORATION_REQUIRED",
@@ -413,7 +426,15 @@ export async function publishCandidate(
   );
   if (duplicate.rowCount)
     throw new AppError(409, "DUPLICATE", "الحقيقة موجودة في المكتبة.");
-  await insertQuestion(db, c, id, actor);
+  await insertQuestion(db, c, id, actor, {
+    kind: row.creation_kind,
+    createdBy: row.created_by,
+  });
+  if (manuallyEntered)
+    await db.query(
+      "INSERT INTO evidence(id,question_id,citation,verification_method,verified_at) VALUES($1,$2,$3,'editorial-admin',now())",
+      [randomUUID(), id, verificationNote],
+    );
   await db.query(
     "UPDATE candidates SET status='approved',verified=true,verification_note=$2 WHERE id=$1",
     [id, verificationNote],
@@ -432,6 +453,7 @@ export async function insertQuestion(
   c: Candidate,
   id: string = randomUUID(),
   actor: string | null = null,
+  origin: OriginContext = unknownOrigin,
 ) {
   await validateAnswerMedia(db, c);
   if (c.media) {
@@ -448,7 +470,7 @@ export async function insertQuestion(
       );
   }
   await db.query(
-    `INSERT INTO questions(id,fact_key,subject,predicate,fact,text,normalized_hash,answer,explanation,hint,difficulty,format,options,region,tags,status,provenance,verified_at,expires_at,reviewed_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'approved',$16,now(),$17,$18)`,
+    `INSERT INTO questions(id,fact_key,subject,predicate,fact,text,normalized_hash,answer,explanation,hint,difficulty,format,options,region,tags,status,provenance,verified_at,expires_at,reviewed_by,creation_kind,created_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,'approved',$16,now(),$17,$18,$19,$20)`,
     [
       id,
       c.factKey,
@@ -468,6 +490,8 @@ export async function insertQuestion(
       c.provenance,
       c.expiresAt ?? null,
       actor,
+      origin.kind,
+      origin.createdBy ?? null,
     ],
   );
   await db.query("UPDATE questions SET fact_signature=$2 WHERE id=$1", [

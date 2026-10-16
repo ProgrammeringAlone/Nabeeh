@@ -912,18 +912,18 @@ test("Ranked team assignments require accounts linked before play and preserve t
   await game.abandon(linked.id,host);
 });
 
-test("Original submitted puzzles stay pending and human approval stores their proof", async()=>{
+test("Manual submitted puzzles stay pending and human approval records editorial review", async()=>{
   const {submitQuestion}=await import("../server/submissions.ts");
   const p=await profile("account"),actor=randomUUID();
   await pool.query("INSERT INTO users(id,profile_id,username,password_hash,role) VALUES($1,$2,$3,$4,'editor')",[actor,p,"manual_"+actor.slice(0,8),hashPassword("manual original editorial test")]);
   const suffix=randomUUID();
-  const submitted=await submitQuestion({text:"في هذا اللغز الأصلي للاختبار، كم عنصرًا نعدّ؟ "+suffix,answer:"7",explanation:"عدّدت العناصر الأصلية واحدًا واحدًا وتحققت من أن العدد سبعة.",hint:"عدّ كل عنصر مرة واحدة.",categoryIds:["logic"],difficulty:"medium",format:"text",evidenceKind:"original",fact:"دليل الحل الأصلي: سبعة عناصر موضّحة في اللغز "+suffix,provenance:"أعددت لغز العد الأصلي بنفسي وراجعت الحل."},actor);
+  const submitted=await submitQuestion({text:"في هذا اللغز الأصلي للاختبار، كم عنصرًا نعدّ؟ "+suffix,answer:"7",explanation:"عدّدت العناصر الأصلية واحدًا واحدًا وتحققت من أن العدد سبعة.",hint:"عدّ كل عنصر مرة واحدة.",categoryIds:["logic"],difficulty:"medium",format:"text"},actor);
   assert.equal(submitted.status,"review");
   assert.equal((await pool.query("SELECT 1 FROM questions WHERE id=$1",[submitted.id])).rowCount,0);
   await transaction(db=>publishCandidate(db,submitted.id,actor,"راجعت الدليل وعدّ العناصر، وتحققت من سلامة الحل وأصل السؤال.",true,1));
   const proof=(await pool.query("SELECT url,citation,verification_method FROM evidence WHERE question_id=$1",[submitted.id])).rows[0];
-  assert.equal(proof.url,null);assert.equal(proof.verification_method,"editorial-original");
-  assert.match(proof.citation,/سبعة عناصر/);
+  assert.equal(proof.url,null);assert.equal(proof.verification_method,"editorial-admin");
+  assert.match(proof.citation,/راجعت الدليل/);
   assert.equal((await pool.query("SELECT deterministic FROM candidates, jsonb_to_record(payload) AS x(deterministic boolean) WHERE id=$1",[submitted.id])).rows[0].deterministic,false);
 });
 

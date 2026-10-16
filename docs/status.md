@@ -11,22 +11,24 @@ The upload/review/suggestion/leaderboard release `ac0c20b` is deployed. Hosted c
 - Canonical IDs and permanent exposure exclusion across modes/categories; sorted participant locks, atomic reservations, indexed bounded selection and matching for overlapping pools. Display records exposure; score retries remain idempotent.
 - Text, choice, ordering, word, image, audio and video question presentation. Choice/order responses persist. Protected media supports byte ranges and equivalents; answers/aliases/order solutions stay hidden until reveal.
 - Guided text/picture/audio/video submission, private durable media uploads, card-local review notes, paginated pending/history queues and atomic admin category/difficulty decisions.
+- Simplified manual submissions without reference, proof or copyright forms; authenticated Admin/AI/generator authorship survives edits and approval. Creator names stay in the editor, while gameplay shows origin alone.
 - Separate image answers with independent upload/library selection and review previews. The game emphasizes the answer image after reveal; its metadata and protected bytes stay hidden beforehand.
 - Editorial JSON import, draft editing with visible difficulty/type and revision checks, exact/structured/media-byte duplicate signals, indexed lexical retrieval, human approval, canonical corrections, source verification, retirement, media previews, audit and admin access controls.
 - Durable arithmetic/model jobs, budgets, lease tokens rejecting stale workers, replenishment requests and an event-driven embedded worker for the free pilot. Generated content always waits for review.
 - Explainable editorial recommendations from approved metadata and decisions, targeted generation using private reviewed examples, and opt-in player/team leaderboards with explicit pre-game team linking.
+- Human-question analysis summarizes approved Admin content by category, difficulty, format, region and tags. Human preferences guide recommendations, and only approved Admin questions supply private model style examples.
 - Optional shared Redis quotas, verified database TLS, bounded connection pools/timeouts, conditional pgvector HNSW indexing and private S3-compatible upload interfaces.
 - Free Render Blueprint, Node 24 Docker image, isolated database checks, GitHub CI workflow, tested installation and deployment/recovery runbooks.
 
-The finite pack contains 36 original drafts: six each image, audio, video, ordering, Arabic word and arithmetic. Its 18 bundled assets were created for Nabeeh. The older 48 development questions remain development-only and are excluded from production. Review notes/source quality and rights are editorial responsibilities.
+The finite pack contains 36 original drafts: six each image, audio, video, ordering, Arabic word and arithmetic. Its 18 bundled assets were created for Nabeeh. The older 48 development questions remain development-only and are excluded from production. New uploads do not request copyright declarations, and omitted media metadata stays null. Historical questions retain unknown origin unless authenticated submission records establish who added them.
 
 ## Validation
 
 | Check | Observed result | Scope |
 | --- | --- | --- |
 | Locked installation, migrations, draft preparation and TypeScript/Vite build | Passed | Existing local checkout/database |
-| PostgreSQL integration suite | 48 passed, no failures/skips; includes answer-image reveal boundaries, private uploads, original proof, suggestion targets, leaderboard privacy and session-cookie renewal | Isolated real databases |
-| Chromium browser suite | 51 passed; separate question/answer-image uploads, protected reveal/reload, guided upload/retry, original proof, review classification/history/concurrency, suggestions and leaderboard privacy included | Desktop 1440×1000, tablet 820×1180, mobile 390×844 |
+| PostgreSQL integration suite | 54 passed, no failures/skips; includes source-free manual approval, immutable authorship and creator privacy, human-only style examples, answer-image reveal boundaries, nullable upload metadata, leaderboard privacy and session-cookie renewal | Isolated real databases |
+| Chromium browser suite | 51 passed; reference-free manual submissions/uploads, Admin/AI badges and creator privacy, human-analysis UI, separate question/answer images, protected reveal/reload, review classification/history/concurrency and leaderboard privacy included | Desktop 1440×1000, tablet 820×1180, mobile 390×844 |
 | Browser gameplay/content/accessibility | Complete games, reload, accounts/recovery, editor edit/approve/access, six formats and protected media; no axe violations in tested screens | Automated checks plus screenshot inspection, not a complete human accessibility audit |
 | Concurrent game workload | 30 players, 60 completed games, 900 requests, 0 failures; p50 16 ms, p95 37 ms | Local isolated DB, concurrency 10; no hosted capacity guarantee |
 | Shared rate limits | Two separate app processes shared one real Redis quota; fourth request blocked after three allowed | Local Redis |

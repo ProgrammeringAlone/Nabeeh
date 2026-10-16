@@ -21,6 +21,19 @@
   padding: 6px 12px;
   border-radius: 30px;
 }
+.qc-origin {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border: 1px solid #c9d8c2;
+  border-radius: 20px;
+  color: #34573f;
+  background: #f4f8ef;
+  font-size: 12px;
+  font-weight: 600;
+  margin-block: 4px 8px;
+}
 .qc-heading h2 {
   font-size: clamp(25px, 3vw, 34px);
   margin-block: 12px 6px;
@@ -122,8 +135,7 @@
   margin-block-start: 30px;
 }
 .qc-section > label,
-.qc-media-box > label,
-.qc-rights > label {
+.qc-media-box > label {
   margin-block: 20px;
 }
 .qc-grid {
@@ -254,80 +266,6 @@
   color: var(--muted);
   margin-block-start: 12px;
 }
-.qc-rights {
-  border-block-start: 1px solid #dbe2d4;
-  margin-block-start: 24px;
-  padding-block-start: 22px;
-}
-.qc-rights h4 {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-block: 0 16px;
-  font-size: 14px;
-}
-.question-composer .qc-check,
-.question-composer .qc-radio {
-  display: flex;
-  flex-direction: row;
-  align-items: flex-start;
-  gap: 10px;
-  font-size: 13px;
-  font-weight: 400;
-}
-.qc-check input,
-.qc-radio input {
-  width: 18px;
-  height: 18px;
-  min-height: 18px;
-  accent-color: var(--green);
-  flex-shrink: 0;
-  margin-block-start: 4px;
-}
-.qc-evidence-options {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px 30px;
-  margin-block: 22px;
-}
-.qc-sources {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-block: 20px;
-}
-.qc-source {
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 18px;
-  background: #fcfcf9;
-}
-.qc-source > label {
-  margin-block: 14px;
-}
-.qc-source-title {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  min-height: 30px;
-}
-.qc-source-title strong {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  font-size: 13px;
-}
-.qc-icon-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
-}
-.qc-icon-button:hover {
-  background: #f2e8e3;
-}
 .qc-text-button {
   align-self: flex-start;
   display: flex;
@@ -408,12 +346,6 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-block: 14px 0;
-}
-.qc-asset-credit {
-  color: var(--muted);
-  font-size: 12px;
-  overflow-wrap: anywhere;
   margin-block: 14px 0;
 }
 .qc-answer-type {
@@ -497,12 +429,6 @@
   }
   .qc-dropzone {
     padding: 24px 12px;
-  }
-  .qc-source {
-    padding: 14px;
-  }
-  .qc-evidence-options {
-    gap: 14px;
   }
   .qc-submit-bar button {
     width: 100%;

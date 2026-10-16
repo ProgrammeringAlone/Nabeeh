@@ -5,6 +5,7 @@ import EditorialSuggestions, {
   type SuggestedQuestionTarget,
 } from "./EditorialSuggestions";
 import { ReviewQueue } from "./ReviewQueue";
+import { QuestionOrigin } from "./QuestionOrigin";
 import {
   statusLabels,
   roleLabels,
@@ -98,6 +99,7 @@ type Game = {
     id: string;
     question_id: string;
     text: string;
+    creation_kind: string;
     status: string;
     answer: string | null;
     accepted_answers: string[] | null;
@@ -1623,6 +1625,7 @@ function GameView({
                 )?.name
               }
             </span>
+            <QuestionOrigin kind={q.creation_kind} />
             <span>{q.value * q.multiplier} نقطة</span>
             <span
               className={`timer ${remaining <= 10 ? "urgent" : ""}`}
@@ -1669,11 +1672,15 @@ function GameView({
                   <p>{q.media_transcript}</p>
                 </details>
               )}
-              <figcaption>
-                <small>
-                  {q.media_credit} · {q.media_license}
-                </small>
-              </figcaption>
+              {(q.media_credit || q.media_license) && (
+                <figcaption>
+                  <small>
+                    {[q.media_credit, q.media_license]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </small>
+                </figcaption>
+              )}
             </figure>
           )}
           {q.format === "ordering" && q.options ? (
@@ -1801,22 +1808,29 @@ function GameView({
                         src={`/api/games/${game.id}/answer-media/${q.id}`}
                         alt={q.answer_media_alt || "صورة الإجابة الصحيحة"}
                       />
-                      <figcaption>
-                        {q.answer_media_credit} · {q.answer_media_license}
-                        {q.answer_media_source && (
-                          <>
-                            {" "}
-                            ·{" "}
-                            <a
-                              href={q.answer_media_source}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              مصدر الصورة
-                            </a>
-                          </>
-                        )}
-                      </figcaption>
+                      {(q.answer_media_credit ||
+                        q.answer_media_license ||
+                        q.answer_media_source) && (
+                        <figcaption>
+                          {[q.answer_media_credit, q.answer_media_license]
+                            .filter(Boolean)
+                            .join(" · ")}
+                          {q.answer_media_source && (
+                            <>
+                              {(q.answer_media_credit ||
+                                q.answer_media_license) &&
+                                " · "}
+                              <a
+                                href={q.answer_media_source}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                مصدر الصورة
+                              </a>
+                            </>
+                          )}
+                        </figcaption>
+                      )}
                     </figure>
                     <details className="answer-explanation">
                       <summary>شرح الإجابة</summary>
@@ -2566,6 +2580,10 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
                   <h2>{q.text}</h2>
                   <span>{labelFor(statusLabels, q.status)}</span>
                 </div>
+                <QuestionOrigin
+                  kind={q.creation_kind}
+                  creator={q.creator_username}
+                />
                 <p>
                   {q.answer} · {labelFor(difficultyLabels, q.difficulty)}
                 </p>
@@ -2944,9 +2962,6 @@ function Admin({ me, run, busy, confirm, refreshMe }: Context) {
 }
 function MediaUploader({ run, busy }: Pick<Context, "run" | "busy">) {
   const [file, setFile] = useState<File | null>(null),
-    [credit, setCredit] = useState(""),
-    [license, setLicense] = useState(""),
-    [source, setSource] = useState(""),
     [assetId, setAssetId] = useState("");
   return (
     <form
@@ -2961,11 +2976,6 @@ function MediaUploader({ run, busy }: Pick<Context, "run" | "busy">) {
               "Content-Type":
                 file.type === "audio/x-wav" ? "audio/wav" : file.type,
               "X-Nabeeh-Request": "1",
-              "X-Media-Credit": encodeURIComponent(credit),
-              "X-Media-License": encodeURIComponent(license),
-              ...(source
-                ? { "X-Media-Source": encodeURIComponent(source) }
-                : {}),
             },
             body: file,
           });
@@ -2975,47 +2985,20 @@ function MediaUploader({ run, busy }: Pick<Context, "run" | "busy">) {
         });
       }}
     >
-      <h2>وسائط مرخّصة للسؤال</h2>
+      <h2>ملفات الوسائط</h2>
       <p>
-        للملفات الجديدة، جهّز تخزين الوسائط أولًا. وسائط الحزمة الأصلية جاهزة
-        للمراجعة. أضف بديلًا نصّيًا للصوت والفيديو في مسودة السؤال.
+        ارفع صورة أو مقطعًا لاستخدامه في مسودة سؤال. يمكنك أيضًا رفعه مباشرة من
+        تبويب «إضافة سؤال».
       </p>
       <label>
         ملف الوسائط
         <input
           type="file"
           required
-          accept="image/png,image/jpeg,image/webp,audio/wav,audio/ogg,video/mp4,video/webm"
+          accept="image/png,image/jpeg,image/webp,audio/wav,audio/ogg,audio/mpeg,video/mp4,video/webm"
           onChange={(e) => setFile(e.target.files?.[0] || null)}
         />
         <small>الحد الأقصى ١٠ ميغابايت.</small>
-      </label>
-      <label>
-        صاحب المحتوى أو اسم الجهة المنتجة
-        <input
-          required
-          minLength={3}
-          value={credit}
-          onChange={(e) => setCredit(e.target.value)}
-        />
-      </label>
-      <label>
-        الترخيص وإذن الاستخدام
-        <input
-          required
-          minLength={3}
-          value={license}
-          onChange={(e) => setLicense(e.target.value)}
-        />
-      </label>
-      <label>
-        رابط المصدر
-        <input
-          type="url"
-          dir="ltr"
-          value={source}
-          onChange={(e) => setSource(e.target.value)}
-        />
       </label>
       <Button type="submit" disabled={busy || !file}>
         رفع الوسائط

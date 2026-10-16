@@ -61,7 +61,7 @@ async function editor(page: Page) {
     throw error;
   }
 }
-async function fillOriginal(page: Page, text: string) {
+async function fillQuestion(page: Page, text: string) {
   const composer = page.locator(".question-composer");
   await composer
     .getByRole("textbox", { name: "نص السؤال", exact: true })
@@ -74,23 +74,66 @@ async function fillOriginal(page: Page, text: string) {
     .fill("اجمع العشرات ثم الآحاد.");
   await composer
     .getByRole("textbox", { name: "شرح الإجابة", exact: true })
-    .fill("نجمع 19 و26 لنحصل على 45.");
+    .fill(`نجمع 19 و26 لنحصل على 45. ${text}`);
   await composer
     .getByRole("combobox", { name: "فئة السؤال", exact: true })
     .selectOption("logic");
   await composer
     .getByRole("combobox", { name: "مستوى الصعوبة", exact: true })
     .selectOption("medium");
-  await composer
-    .getByRole("radio", { name: "لغز أو محتوى أصلي", exact: true })
-    .check();
-  await composer
-    .getByRole("textbox", { name: /^طريقة التحقّق أو الحلّ/ })
-    .fill(`19 + 26 = 45. برهان أصلي لاختبار المحرّر ${text}`);
-  await composer
-    .getByRole("textbox", { name: "ملاحظة عن إعداد السؤال", exact: true })
-    .fill("أعددت هذا السؤال الحسابي بنفسي وراجعت خطوات الحلّ يدويًا.");
 }
+function captureUploads(page: Page) {
+  const pending: Promise<void>[] = [];
+  const mediaIds: string[] = [];
+  const requests: Record<string, string>[] = [];
+  page.on("response", (response) => {
+    if (
+      new URL(response.url()).pathname === "/api/admin/media" &&
+      response.request().method() === "POST" &&
+      response.ok()
+    ) {
+      requests.push(response.request().headers());
+      pending.push(
+        response.json().then((asset) => {
+          mediaIds.push(asset.id);
+        }),
+      );
+    }
+  });
+  return {
+    mediaIds,
+    requests,
+    settle: async () => {
+      await Promise.all(pending);
+    },
+  };
+}
+async function expectSimpleComposer(page: Page) {
+  const composer = page.locator(".question-composer");
+  await expect(composer.locator(".qc-origin")).toContainText("Admin");
+  await expect(
+    composer.getByLabel(
+      /رابط المصدر|المعلومة أو الفقرة|طريقة التحقّق|ملاحظة عن إعداد السؤال|صاحب المحتوى|صاحب صورة الإجابة|الترخيص|إذن الاستخدام|حق نشر/,
+    ),
+  ).toHaveCount(0);
+  await expect(
+    composer.getByRole("radio", { name: /أصلي|تستند إلى مصدر/ }),
+  ).toHaveCount(0);
+}
+async function expectAdminOrigin(
+  db: pg.Client,
+  text: string,
+  username: string,
+) {
+  const row = (
+    await db.query(
+      "SELECT c.creation_kind,u.username FROM candidates c LEFT JOIN users u ON u.id=c.created_by WHERE c.payload->>'text'=$1",
+      [text],
+    )
+  ).rows[0];
+  expect(row).toEqual({ creation_kind: "admin", username });
+}
+
 async function cleanup(
   db: pg.Client,
   username: string,
@@ -140,9 +183,8 @@ test("Question and answer images upload independently, survive a failed save, an
 }, testInfo) => {
   const { db, username } = await editor(page);
   const text = `أي صورة تكمل النمط في سؤال الاختبار ${randomUUID()}؟`;
-  const questionCredit = `صاحب صورة السؤال ${randomUUID()}`;
-  const answerCredit = `صاحب صورة الحل ${randomUUID()}`;
-  const mediaIds: string[] = [];
+  const upload = captureUploads(page);
+  const { mediaIds } = upload;
   const png = Buffer.from(
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
     "base64",
@@ -183,19 +225,7 @@ test("Question and answer images upload independently, survive a failed save, an
         mimeType: "image/png",
         buffer: png,
       });
-    await composer
-      .getByRole("textbox", {
-        name: "صاحب المحتوى أو اسم الجهة المنتجة",
-        exact: true,
-      })
-      .fill(questionCredit);
-    await composer
-      .getByRole("checkbox", {
-        name: "أؤكد أن لدي حق نشر هذا الملف واستخدامه في اللعبة.",
-        exact: true,
-      })
-      .check();
-    await fillOriginal(page, text);
+    await fillQuestion(page, text);
     await composer
       .getByRole("group", { name: "نوع الإجابة", exact: true })
       .getByRole("button", { name: "صورة", exact: true })
@@ -226,18 +256,7 @@ test("Question and answer images upload independently, survive a failed save, an
           .evaluate((node: HTMLImageElement) => node.naturalWidth),
       )
       .toBe(1);
-    await picker
-      .getByRole("textbox", {
-        name: "صاحب صورة الإجابة أو الجهة المنتجة",
-        exact: true,
-      })
-      .fill(answerCredit);
-    await picker
-      .getByRole("checkbox", {
-        name: "أؤكد أن لدي حق نشر صورة الإجابة واستخدامها في اللعبة.",
-        exact: true,
-      })
-      .check();
+    await expectSimpleComposer(page);
     await expect(
       composer.getByRole("textbox", { name: "نص السؤال", exact: true }),
     ).toHaveCount(1);
@@ -252,13 +271,26 @@ test("Question and answer images upload independently, survive a failed save, an
     await expect(composer.getByRole("alert")).toHaveText(
       "تعذّر حفظ السؤال مؤقتًا. حاول مرة أخرى.",
     );
+    await upload.settle();
     const assets = (
       await db.query(
-        "SELECT id,credit FROM media_assets WHERE credit=ANY($1::text[])",
-        [[questionCredit, answerCredit]],
+        "SELECT id,credit,license,source FROM media_assets WHERE id=ANY($1::uuid[])",
+        [mediaIds],
       )
     ).rows;
-    mediaIds.push(...assets.map((asset) => asset.id));
+    expect(
+      assets.every(
+        (asset) =>
+          asset.credit === null &&
+          asset.license === null &&
+          asset.source === null,
+      ),
+    ).toBe(true);
+    for (const request of upload.requests) {
+      expect(request["x-media-credit"]).toBeUndefined();
+      expect(request["x-media-license"]).toBeUndefined();
+      expect(request["x-media-source"]).toBeUndefined();
+    }
     expect(mediaIds).toHaveLength(2);
     expect(uploads).toBe(2);
     await expect(picker.getByText(/صورة الإجابة محفوظة/)).toBeVisible();
@@ -283,10 +315,8 @@ test("Question and answer images upload independently, survive a failed save, an
         [text],
       )
     ).rows[0];
-    const questionId = assets.find(
-      (asset) => asset.credit === questionCredit,
-    )!.id;
-    const answerId = assets.find((asset) => asset.credit === answerCredit)!.id;
+    const [questionId, answerId] = mediaIds;
+    await expectAdminOrigin(db, text, username);
     expect(candidate.status).toBe("review");
     expect(candidate.payload.media.assetId).toBe(questionId);
     expect(candidate.payload.answerMedia).toEqual({
@@ -304,6 +334,10 @@ test("Question and answer images upload independently, survive a failed save, an
     const card = page
       .locator(".rq-card")
       .filter({ has: page.getByRole("heading", { name: text, exact: true }) });
+    await expect(card.getByTestId("question-origin")).toContainText(
+      "Admin · مشرف",
+    );
+    await expect(card.getByTestId("question-origin")).toContainText(username);
     await expect(card.getByTestId("review-answer-image")).toHaveAttribute(
       "src",
       `/api/admin/media/${answerId}`,
@@ -327,7 +361,7 @@ test("Question and answer images upload independently, survive a failed save, an
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
-    // The same licensed answer asset can be reused without uploading a third file.
+    // The same answer asset can be reused without uploading a third file.
     await page.getByRole("button", { name: "إضافة سؤال", exact: true }).click();
     await composer
       .getByRole("button", { name: "نص سؤال مكتوب وإجابة واضحة", exact: true })
@@ -351,16 +385,16 @@ test("Question and answer images upload independently, survive a failed save, an
       .click();
     await expect(picker.getByTestId("answer-image-preview")).toHaveCount(0);
   } finally {
+    await upload.settle();
     await cleanup(db, username, [text], mediaIds);
   }
 });
 
-test("The guided composer requires a type and explicit category/difficulty; original evidence stays pending human review", async ({
+test("The guided composer saves admin questions with category and difficulty and no references or copyright fields", async ({
   page,
 }, testInfo) => {
   const { db, username } = await editor(page);
   const text = `كم يساوي مجموع 19 و26 في تجربة التحرير ${randomUUID()}؟`;
-  const sourcedText = `ما قيمة مجموع 19 و26 في السؤال الموثّق ${randomUUID()}؟`;
   try {
     const composer = page.locator(".question-composer");
     await expect(
@@ -369,20 +403,38 @@ test("The guided composer requires a type and explicit category/difficulty; orig
     await composer
       .getByRole("button", { name: "نص سؤال مكتوب وإجابة واضحة", exact: true })
       .click();
+    await expectSimpleComposer(page);
     await expect(
       composer.getByRole("combobox", { name: "فئة السؤال", exact: true }),
     ).toHaveValue("");
     await expect(
       composer.getByRole("combobox", { name: "مستوى الصعوبة", exact: true }),
     ).toHaveValue("");
-    await fillOriginal(page, text);
+    await fillQuestion(page, text);
     await page.screenshot({
       path: `test-results/composer-${testInfo.project.name}.png`,
       fullPage: true,
     });
+    const submitted = page.waitForRequest(
+      (request) =>
+        new URL(request.url()).pathname === "/api/admin/submissions" &&
+        request.method() === "POST",
+    );
     await composer
       .getByRole("button", { name: "إرسال السؤال للمراجعة", exact: true })
       .click();
+    const body = (await submitted).postDataJSON();
+    for (const key of [
+      "sources",
+      "evidenceKind",
+      "proof",
+      "provenance",
+      "creationKind",
+      "createdBy",
+      "creation_kind",
+      "created_by",
+    ])
+      expect(body).not.toHaveProperty(key);
     await expect
       .poll(
         async () =>
@@ -405,67 +457,14 @@ test("The guided composer requires a type and explicit category/difficulty; orig
       format: "text",
       categoryIds: ["logic"],
       difficulty: "medium",
-      evidenceKind: "original",
       deterministic: false,
       sources: [],
     });
+    await expectAdminOrigin(db, text, username);
     expect(
       (await db.query("SELECT 1 FROM questions WHERE text=$1", [text]))
         .rowCount,
     ).toBe(0);
-    await page.getByRole("button", { name: "إضافة سؤال", exact: true }).click();
-    await composer
-      .getByRole("button", { name: "نص سؤال مكتوب وإجابة واضحة", exact: true })
-      .click();
-    await fillOriginal(page, sourcedText);
-    await composer
-      .getByRole("radio", { name: "معلومة تستند إلى مصدر", exact: true })
-      .check();
-    await composer
-      .getByRole("button", { name: "إرسال السؤال للمراجعة", exact: true })
-      .click();
-    expect(
-      (
-        await db.query("SELECT 1 FROM candidates WHERE payload->>'text'=$1", [
-          sourcedText,
-        ])
-      ).rowCount,
-    ).toBe(0);
-    await composer
-      .getByRole("textbox", { name: "رابط المصدر", exact: true })
-      .fill("https://example.com/composer-browser-fixture");
-    await composer
-      .getByRole("textbox", {
-        name: "المعلومة أو الفقرة التي تدعم الإجابة",
-        exact: true,
-      })
-      .fill("مرجع اصطناعي للاختبار فقط: 19 + 26 = 45. لا يُنشر دون مراجعة.");
-    await composer
-      .getByRole("button", { name: "إرسال السؤال للمراجعة", exact: true })
-      .click();
-    await expect
-      .poll(
-        async () =>
-          (
-            await db.query(
-              "SELECT count(*)::int AS count FROM candidates WHERE payload->>'text'=$1",
-              [sourcedText],
-            )
-          ).rows[0].count,
-      )
-      .toBe(1);
-    const sourced = (
-      await db.query(
-        "SELECT status,payload FROM candidates WHERE payload->>'text'=$1",
-        [sourcedText],
-      )
-    ).rows[0];
-    expect(sourced.status).toBe("review");
-    expect(sourced.payload.evidenceKind).toBe("factual");
-    expect(sourced.payload.deterministic).toBe(false);
-    expect(sourced.payload.sources[0].url).toBe(
-      "https://example.com/composer-browser-fixture",
-    );
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     expect(
       await page.evaluate(
@@ -473,7 +472,7 @@ test("The guided composer requires a type and explicit category/difficulty; orig
       ),
     ).toBe(true);
   } finally {
-    await cleanup(db, username, [text, sourcedText]);
+    await cleanup(db, username, [text]);
   }
 });
 
@@ -482,8 +481,8 @@ test("A failed submission keeps uploaded media and inputs; retry reuses the file
 }, testInfo) => {
   const { db, username } = await editor(page);
   const text = `ما العدد المكتوب في الصورة الخاصة بتجربة ${randomUUID()}؟`;
-  const credit = `مؤلف الاختبار ${randomUUID()}`;
-  const mediaIds: string[] = [];
+  const upload = captureUploads(page);
+  const { mediaIds } = upload;
   let uploads = 0,
     failed = false;
   page.on("request", (request) => {
@@ -541,19 +540,8 @@ test("A failed submission keeps uploaded media and inputs; retry reuses the file
           .evaluate((node) => (node as HTMLImageElement).naturalWidth),
       )
       .toBe(1);
-    await composer
-      .getByRole("textbox", {
-        name: "صاحب المحتوى أو اسم الجهة المنتجة",
-        exact: true,
-      })
-      .fill(credit);
-    await composer
-      .getByRole("checkbox", {
-        name: "أؤكد أن لدي حق نشر هذا الملف واستخدامه في اللعبة.",
-        exact: true,
-      })
-      .check();
-    await fillOriginal(page, text);
+    await expectSimpleComposer(page);
+    await fillQuestion(page, text);
     await page.screenshot({
       path: `test-results/composer-media-${testInfo.project.name}.png`,
       fullPage: true,
@@ -573,12 +561,19 @@ test("A failed submission keeps uploaded media and inputs; retry reuses the file
         { exact: true },
       ),
     ).toBeVisible();
+    await upload.settle();
+    expect(mediaIds).toHaveLength(1);
     const uploaded = (
-      await db.query("SELECT id,storage FROM media_assets WHERE credit=$1", [
-        credit,
-      ])
+      await db.query(
+        "SELECT id,storage,credit,license,source FROM media_assets WHERE id=$1",
+        [mediaIds[0]],
+      )
     ).rows[0];
-    mediaIds.push(uploaded.id);
+    expect(uploaded).toMatchObject({
+      credit: null,
+      license: null,
+      source: null,
+    });
     expect(uploaded.storage).toBe("database");
     await composer
       .getByRole("button", { name: "إرسال السؤال للمراجعة", exact: true })
@@ -642,14 +637,7 @@ test("A failed submission keeps uploaded media and inputs; retry reuses the file
       ),
     ).toBe(true);
   } finally {
-    if (!mediaIds.length)
-      mediaIds.push(
-        ...(
-          await db.query("SELECT id FROM media_assets WHERE credit=$1", [
-            credit,
-          ])
-        ).rows.map((row) => row.id),
-      );
+    await upload.settle();
     await cleanup(db, username, [text], mediaIds);
   }
 });
@@ -722,13 +710,13 @@ test("Audio and video drafts use one question prompt while optional accessibilit
       await expect(
         composer.getByRole("textbox", { name: /^تفريغ المقطع أو وصف محتواه/ }),
       ).toHaveCount(0);
-      await fillOriginal(page, text);
+      await fillQuestion(page, text);
       await composer
         .getByRole("textbox", { name: "الإجابة الصحيحة", exact: true })
         .fill(fixture.answer);
       await composer
         .getByRole("textbox", { name: "شرح الإجابة", exact: true })
-        .fill(fixture.explanation);
+        .fill(`${fixture.explanation} ${text}`);
       await composer
         .getByRole("textbox", { name: "تلميح مساعد", exact: true })
         .fill(fixture.hint);
@@ -738,11 +726,7 @@ test("Audio and video drafts use one question prompt while optional accessibilit
       await composer
         .getByRole("combobox", { name: "مستوى الصعوبة", exact: true })
         .selectOption(fixture.difficulty);
-      await composer
-        .getByRole("textbox", { name: /^طريقة التحقّق أو الحلّ/ })
-        .fill(
-          `راجعت المقطع الأصلي وعددت الأحداث يدويًا: ${fixture.explanation} مرجع اختبار ${text}`,
-        );
+      await expectSimpleComposer(page);
       await composer
         .getByRole("button", { name: "إرسال السؤال للمراجعة", exact: true })
         .click();
@@ -764,6 +748,7 @@ test("Audio and video drafts use one question prompt while optional accessibilit
         )
       ).rows[0];
       expect(candidate.status).toBe("review");
+      await expectAdminOrigin(db, text, username);
       expect(candidate.payload.media.assetId).toBe(fixture.media!.assetId);
       expect(candidate.payload.media.alt).toBe(
         format === "audio"

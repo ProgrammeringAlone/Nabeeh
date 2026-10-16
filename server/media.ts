@@ -130,7 +130,7 @@ function metadataHeader(req: Request, name: string) {
     throw new AppError(
       400,
       "MEDIA_METADATA_INVALID",
-      "راجع معلومات صاحب الملف وترخيصه ومصدره.",
+      "راجع المعلومات الإضافية للملف.",
     );
   try {
     return decodeURIComponent(value).trim();
@@ -138,15 +138,15 @@ function metadataHeader(req: Request, name: string) {
     throw new AppError(
       400,
       "MEDIA_METADATA_INVALID",
-      "تعذّر قراءة معلومات الملف. أعد إدخال اسم صاحبه وترخيصه.",
+      "تعذّر قراءة المعلومات الإضافية للملف.",
     );
   }
 }
 export async function uploadMedia(req: Request, res: Response) {
   const checked = z
     .object({
-      credit: z.string().min(3).max(500),
-      license: z.string().min(3).max(500),
+      credit: z.string().min(3).max(500).optional(),
+      license: z.string().min(3).max(500).optional(),
       source: z
         .string()
         .url()
@@ -158,15 +158,15 @@ export async function uploadMedia(req: Request, res: Response) {
         .optional(),
     })
     .safeParse({
-      credit: metadataHeader(req, "x-media-credit"),
-      license: metadataHeader(req, "x-media-license"),
+      credit: metadataHeader(req, "x-media-credit") || undefined,
+      license: metadataHeader(req, "x-media-license") || undefined,
       source: metadataHeader(req, "x-media-source") || undefined,
     });
   if (!checked.success)
     throw new AppError(
       400,
       "MEDIA_METADATA_INVALID",
-      "أدخل اسم صاحب الملف وترخيصه، ورابط مصدر يبدأ بـ https إن وُجد.",
+      "راجع المعلومات الإضافية للملف. رابط المصدر، إن أُرفق، يجب أن يبدأ بـ https.",
     );
   const metadata = checked.data;
   const mime =
@@ -196,8 +196,8 @@ export async function uploadMedia(req: Request, res: Response) {
     objectKey,
     bytes.length,
     createHash("sha256").update(bytes).digest("hex"),
-    metadata.credit,
-    metadata.license,
+    metadata.credit ?? null,
+    metadata.license ?? null,
     metadata.source ?? null,
     req.identity.userId,
   ];

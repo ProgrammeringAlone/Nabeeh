@@ -107,9 +107,6 @@ function draft(answerAsset: string) {
     categoryIds: ["answer-media-test"],
     difficulty: "easy",
     format: "text",
-    evidenceKind: "original",
-    provenance: "لغز هندسي أصلي خاص باختبار الإجابة المصورة.",
-    fact: "دليل حل هندسي أصلي لهذا السؤال فقط: " + nonce,
     answerMedia: { assetId: answerAsset },
   };
 }
@@ -121,6 +118,9 @@ function advanced(
     nonce = randomUUID();
   return candidateSchema.parse({
     ...d,
+    evidenceKind: "original",
+    provenance: "لغز هندسي أصلي خاص باختبار الإجابة المصورة.",
+    fact: "دليل حل هندسي أصلي لهذا السؤال فقط: " + nonce,
     factKey: "answer-media:" + nonce,
     subject: nonce,
     predicate: "shape",
@@ -175,9 +175,7 @@ before(async () => {
   origin = "http://127.0.0.1:" + address.port;
 });
 beforeEach(async () => {
-  await pool.query(
-    "TRUNCATE games,questions,candidates,media_assets CASCADE",
-  );
+  await pool.query("TRUNCATE games,questions,candidates,media_assets CASCADE");
 });
 after(async () => {
   if (server) {

@@ -87,8 +87,20 @@ test("Private database uploads preserve bytes, Arabic rights metadata and pagina
   assert.equal((await listEditorMedia("audio")).assets.length,1);assert.equal((await listEditorMedia("video")).assets.length,0);
 });
 
-test("Uploads reject malformed rights, MIME disguises and oversized files before storing data",async()=>{
-  const invalidMetadata:Record<string,string>[]=[{"x-media-credit":"%E0%A4%A"},{"x-media-source":"javascript%3Aalert(1)"},{"x-media-credit":"%20%20"}];
+test("Uploads without optional metadata preserve uploader identity and do not invent rights declarations",async()=>{
+  for (const headers of [undefined,{"x-media-credit":"%20%20","x-media-license":"","x-media-source":"%20"}]) {
+    const response=await fetch(origin+"/media",{method:"POST",headers:{cookie:editorCookie,"content-type":"image/png",...headers},body:new Uint8Array(png)});
+    assert.equal(response.status,201);const {id}=await response.json();
+    const stored=(await pool.query("SELECT a.credit,a.license,a.source,a.created_by,u.profile_id FROM media_assets a JOIN users u ON u.id=a.created_by WHERE a.id=$1",[id])).rows[0];
+    assert.equal(stored.credit,null);assert.equal(stored.license,null);assert.equal(stored.source,null);
+    assert.ok(stored.created_by);assert.equal(stored.profile_id,editorProfile);
+  }
+  const page=await listEditorMedia("image");assert.equal(page.assets.length,2);
+  assert.ok(page.assets.every(asset=>asset.credit===null && asset.license===null && asset.source===null));
+});
+
+test("Uploads reject malformed optional metadata, MIME disguises and oversized files before storing data",async()=>{
+  const invalidMetadata:Record<string,string>[]=[{"x-media-credit":"%E0%A4%A"},{"x-media-source":"javascript%3Aalert(1)"},{"x-media-source":"http%3A%2F%2Fexample.com"},{"x-media-source":"https%3A%2F%2Fuser%3Apass%40example.com"},{"x-media-credit":"ab"},{"x-media-license":"ab"}];
   for (const headers of invalidMetadata) {
     const response=await post(png,"image/png",headers);assert.equal(response.status,400);assert.equal((await response.json()).code,"MEDIA_METADATA_INVALID");
   }

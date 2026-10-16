@@ -9,6 +9,7 @@ import {
   X,
 } from "lucide-react";
 import { difficultyLabels, formatLabels } from "./arabic";
+import { QuestionOrigin } from "./QuestionOrigin";
 import "./ReviewQueue.css";
 
 type ReviewStatus = "review" | "duplicate" | "approved" | "rejected";
@@ -18,6 +19,8 @@ export type ReviewCandidate = {
   id: string;
   status: ReviewStatus;
   revision: number;
+  creation_kind?: string | null;
+  creator_username?: string | null;
   verification_note?: string | null;
   reason?: string | null;
   payload: {
@@ -34,9 +37,9 @@ export type ReviewCandidate = {
       assetId: string;
       alt: string;
       transcript?: string;
-      credit?: string;
-      license?: string;
-      source?: string;
+      credit?: string | null;
+      license?: string | null;
+      source?: string | null;
     };
     answerMedia?: {
       assetId: string;
@@ -186,6 +189,10 @@ function ReviewCard({
         <span className="rq-format">
           {formatLabels[candidate.payload.format] || "نوع غير محدد"}
         </span>
+        <QuestionOrigin
+          kind={candidate.creation_kind}
+          creator={candidate.creator_username}
+        />
         {editable && (
           <button
             type="button"
@@ -405,11 +412,6 @@ function ReviewCard({
               <p>إعداد المحتوى: {candidate.payload.provenance}</p>
             )}
         </details>
-      ) : editable ? (
-        <p className="rq-caution">
-          أضف مصدرًا موثوقًا أو دليلًا يمكن التحقّق منه في المسودة قبل اعتماد
-          السؤال.
-        </p>
       ) : null}
 
       {matches.length > 0 && (
@@ -456,7 +458,7 @@ function ReviewCard({
               minLength={12}
               disabled={disabled}
               onChange={(event) => setNote(event.target.value)}
-              placeholder="مصدر الإجابة، طريقة التحقّق، وسبب قبول السؤال أو رفضه…"
+              placeholder="دقة الإجابة، وضوح الصياغة، وسبب قبول السؤال أو رفضه…"
               aria-describedby={`${fieldId}-note-help`}
             />
           </label>
@@ -560,7 +562,7 @@ export function ReviewQueue({
       if (
         action === "approve" &&
         !(await confirm(
-          "اعتماد هذا السؤال وإتاحته للعب؟ تحقّق من الإجابة والمصادر والفئة والصعوبة قبل التأكيد.",
+          "اعتماد هذا السؤال وإتاحته للعب؟ تحقّق من الإجابة ووضوح الصياغة والفئة والصعوبة قبل التأكيد.",
         ))
       )
         return;
@@ -607,7 +609,7 @@ export function ReviewQueue({
         <div>
           <h2>مراجعة الأسئلة</h2>
           <p>
-            حدّد الفئة والصعوبة، ثم راجع الإجابة والمصادر. يغادر السؤال قائمة
+            حدّد الفئة والصعوبة، ثم راجع دقة السؤال والإجابة. يغادر السؤال قائمة
             الانتظار فور اعتمادك أو رفضك له.
           </p>
         </div>

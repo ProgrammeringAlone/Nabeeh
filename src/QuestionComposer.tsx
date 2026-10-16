@@ -6,12 +6,10 @@ import {
   FileText,
   Image,
   Library,
-  Link2,
   Music2,
   Plus,
   ShieldCheck,
   UploadCloud,
-  X,
 } from "lucide-react";
 import "./question-composer.css";
 import AnswerImagePicker, {
@@ -22,12 +20,11 @@ type QuestionFormat = "text" | "image" | "audio" | "video";
 type Asset = {
   id: string;
   mime: string;
-  credit: string;
-  license: string;
+  credit: string | null;
+  license: string | null;
   source?: string | null;
   sizeBytes?: number;
 };
-type Source = { url: string; citation: string };
 export type QuestionComposerProps = {
   categories: { id: string; name: string }[];
   initialTarget?: {
@@ -77,7 +74,6 @@ const typeHints = {
   video: "MP4 أو WebM",
 };
 const maxBytes = 10 * 1024 * 1024;
-const initialSources = (): Source[] => [{ url: "", citation: "" }];
 const list = (value: string) => [
   ...new Set(
     value
@@ -119,12 +115,6 @@ export default function QuestionComposer({
     [region, setRegion] = useState("all");
   const [aliases, setAliases] = useState(""),
     [tags, setTags] = useState("");
-  const [evidenceKind, setEvidenceKind] = useState<"factual" | "original">(
-      "factual",
-    ),
-    [sources, setSources] = useState(initialSources),
-    [fact, setFact] = useState(""),
-    [provenance, setProvenance] = useState("");
   const [mediaMode, setMediaMode] = useState<"upload" | "library">("upload"),
     [file, setFile] = useState<File | null>(null),
     [previewUrl, setPreviewUrl] = useState("");
@@ -133,12 +123,7 @@ export default function QuestionComposer({
     [uploadedAsset, setUploadedAsset] = useState<Asset | null>(null);
   const [assetsLoading, setAssetsLoading] = useState(false),
     [assetsError, setAssetsError] = useState("");
-  const [credit, setCredit] = useState(""),
-    [rights, setRights] = useState<"original" | "licensed">("original"),
-    [license, setLicense] = useState(""),
-    [mediaSource, setMediaSource] = useState("");
-  const [ownershipConfirmed, setOwnershipConfirmed] = useState(false),
-    [alt, setAlt] = useState(""),
+  const [alt, setAlt] = useState(""),
     [transcript, setTranscript] = useState("");
   const [busy, setBusy] = useState(false),
     [stage, setStage] = useState<"uploading" | "submitting" | null>(null),
@@ -255,20 +240,11 @@ export default function QuestionComposer({
     setRegion("all");
     setAliases("");
     setTags("");
-    setEvidenceKind("factual");
-    setSources(initialSources());
-    setFact("");
-    setProvenance("");
     setMediaMode("upload");
     setPreviewUrl("");
     setFile(null);
     setAsset(null);
     setUploadedAsset(null);
-    setCredit("");
-    setRights("original");
-    setLicense("");
-    setMediaSource("");
-    setOwnershipConfirmed(false);
     setAlt("");
     setTranscript("");
     if (fileInput.current) fileInput.current.value = "";
@@ -304,18 +280,10 @@ export default function QuestionComposer({
       let mediaId = selectedAsset?.id;
       if (isMedia && mediaMode === "upload" && !mediaId && file) {
         setStage("uploading");
-        const mediaLicense =
-          rights === "original"
-            ? "عمل أصلي — بإذن صاحب الحقوق للاستخدام في نبيه"
-            : license.trim();
         const headers: Record<string, string> = {
           "Content-Type": file.type === "audio/x-wav" ? "audio/wav" : file.type,
           "X-Nabeeh-Request": "1",
-          "X-Media-Credit": encodeURIComponent(credit.trim()),
-          "X-Media-License": encodeURIComponent(mediaLicense),
         };
-        if (mediaSource.trim())
-          headers["X-Media-Source"] = encodeURIComponent(mediaSource.trim());
         const uploaded = await request<{
           id: string;
           mime: string;
@@ -323,9 +291,9 @@ export default function QuestionComposer({
         }>("/api/admin/media", { method: "POST", headers, body: file });
         const kept = {
           ...uploaded,
-          credit: credit.trim(),
-          license: mediaLicense,
-          source: mediaSource.trim() || null,
+          credit: null,
+          license: null,
+          source: null,
         };
         setUploadedAsset(kept);
         mediaId = uploaded.id;
@@ -356,18 +324,6 @@ export default function QuestionComposer({
           region,
           aliases: list(aliases),
           tags: list(tags),
-          sources:
-            evidenceKind === "factual"
-              ? sources.map((s) => ({
-                  url: s.url.trim(),
-                  citation: s.citation.trim(),
-                }))
-              : [],
-          provenance: provenance.trim(),
-          evidenceKind,
-          ...(evidenceKind === "original" && fact.trim()
-            ? { fact: fact.trim() }
-            : {}),
           ...(isMedia
             ? {
                 media: {
@@ -416,9 +372,13 @@ export default function QuestionComposer({
           <Plus size={16} aria-hidden="true" /> سؤال جديد
         </span>
         <h2 id={`${id}-title`}>أضف سؤالًا بطريقتك</h2>
+        <span className="qc-origin">
+          أضافه مشرف · <bdi>Admin</bdi>
+        </span>
         <p>
           اختر نوع السؤال، وحدّد فئته ومستواه. يبقى خارج اللعب حتى يراجعه محرّر
-          ويعتمده.
+          ويعتمده. تساعد بيانات الأسئلة المعتمدة، مثل الفئة والصعوبة والوسوم، في
+          توجيه الاقتراحات الجديدة.
         </p>
       </div>
       {error && (
@@ -580,8 +540,9 @@ export default function QuestionComposer({
                           <option value="">اختر ملفًا</option>
                           {assets.map((a, index) => (
                             <option key={a.id} value={a.id}>
-                              {a.credit} · {a.mime.split("/")[1].toUpperCase()}{" "}
-                              · الملف {index + 1}
+                              {a.credit?.trim() || "ملف محفوظ"} ·{" "}
+                              {a.mime.split("/")[1].toUpperCase()} · الملف{" "}
+                              {index + 1}
                             </option>
                           ))}
                         </select>
@@ -590,24 +551,6 @@ export default function QuestionComposer({
                       <p>
                         لا توجد ملفات من هذا النوع بعد. اختر «رفع ملف» لإضافة
                         ملف جديد.
-                      </p>
-                    )}
-                    {asset && (
-                      <p className="qc-asset-credit">
-                        {asset.credit} · {asset.license}
-                        {asset.source && (
-                          <>
-                            {" "}
-                            ·{" "}
-                            <a
-                              href={asset.source}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                            >
-                              مصدر الملف
-                            </a>
-                          </>
-                        )}
                       </p>
                     )}
                   </div>
@@ -677,93 +620,6 @@ export default function QuestionComposer({
                     </label>
                   )}
                 </details>
-                {mediaMode === "upload" && (
-                  <div className="qc-rights">
-                    <h4>
-                      <ShieldCheck size={17} aria-hidden="true" /> حقوق استخدام
-                      الملف
-                    </h4>
-                    <div className="qc-grid">
-                      <label htmlFor={`${id}-rights`}>
-                        مصدر الحقوق
-                        <select
-                          id={`${id}-rights`}
-                          value={rights}
-                          disabled={!!uploadedAsset || busy}
-                          onChange={(event) => {
-                            setRights(
-                              event.target.value as "original" | "licensed",
-                            );
-                            setOwnershipConfirmed(false);
-                          }}
-                        >
-                          <option value="original">ملف أصلي أملك حقوقه</option>
-                          <option value="licensed">
-                            ملف لدي إذن أو ترخيص باستخدامه
-                          </option>
-                        </select>
-                      </label>
-                      <label htmlFor={`${id}-credit`}>
-                        صاحب المحتوى أو اسم الجهة المنتجة
-                        <input
-                          id={`${id}-credit`}
-                          value={credit}
-                          disabled={!!uploadedAsset || busy}
-                          onChange={(event) => setCredit(event.target.value)}
-                          required
-                          minLength={3}
-                          maxLength={500}
-                          placeholder="اسم المصوّر، المؤلف، أو الجهة"
-                        />
-                      </label>
-                    </div>
-                    {rights === "licensed" && (
-                      <div className="qc-grid">
-                        <label htmlFor={`${id}-license`}>
-                          الترخيص أو وصف الإذن
-                          <input
-                            id={`${id}-license`}
-                            value={license}
-                            disabled={!!uploadedAsset || busy}
-                            onChange={(event) => setLicense(event.target.value)}
-                            required
-                            minLength={3}
-                            maxLength={500}
-                            placeholder="مثل CC BY 4.0، أو إذن كتابي من صاحب الحقوق"
-                          />
-                        </label>
-                        <label htmlFor={`${id}-media-source`}>
-                          رابط مصدر الملف
-                          <input
-                            id={`${id}-media-source`}
-                            type="url"
-                            dir="ltr"
-                            value={mediaSource}
-                            disabled={!!uploadedAsset || busy}
-                            onChange={(event) =>
-                              setMediaSource(event.target.value)
-                            }
-                            required
-                            pattern="https://.*"
-                            maxLength={2000}
-                            placeholder="https://…"
-                          />
-                        </label>
-                      </div>
-                    )}
-                    <label className="qc-check">
-                      <input
-                        type="checkbox"
-                        checked={ownershipConfirmed}
-                        onChange={(event) =>
-                          setOwnershipConfirmed(event.target.checked)
-                        }
-                        required
-                      />{" "}
-                      أؤكد أن لدي حق نشر هذا الملف واستخدامه في اللعبة.
-                    </label>
-                  </div>
-                )}
               </div>
             )}
             <label htmlFor={`${id}-text`}>
@@ -827,7 +683,7 @@ export default function QuestionComposer({
                   maxLength={300}
                   placeholder={
                     answerType === "image"
-                      ? "اسم الإجابة أو مرجع مختصر للصورة"
+                      ? "اسم الإجابة أو وصف موجز للصورة"
                       : "الإجابة الأساسية"
                   }
                   aria-describedby={
@@ -836,7 +692,7 @@ export default function QuestionComposer({
                 />
                 {answerType === "image" && (
                   <small id={`${id}-answer-help`}>
-                    مرجع نصّي قصير للمحرّر والتحقّق من التكرار. تظهر الصورة
+                    وصف نصّي قصير للمحرّر والتحقّق من التكرار. تظهر الصورة
                     للاعبين عند كشف الإجابة.
                   </small>
                 )}
@@ -923,142 +779,6 @@ export default function QuestionComposer({
                 <option value="qa">قطر</option>
                 <option value="om">عُمان</option>
               </select>
-            </label>
-          </div>
-          <div className="qc-section">
-            <h3>
-              <span className="qc-step">4</span> ما يدعم صحة السؤال
-            </h3>
-            <p className="qc-section-description">
-              المراجع أو طريقة الحل تساعد المحرّر على التحقّق. إضافة مصدر لا
-              تعني اعتماد السؤال تلقائيًا.
-            </p>
-            <div className="qc-evidence-options">
-              <label className="qc-radio">
-                <input
-                  type="radio"
-                  name={`${id}-evidence-kind`}
-                  value="factual"
-                  checked={evidenceKind === "factual"}
-                  onChange={() => setEvidenceKind("factual")}
-                />{" "}
-                معلومة تستند إلى مصدر
-              </label>
-              <label className="qc-radio">
-                <input
-                  type="radio"
-                  name={`${id}-evidence-kind`}
-                  value="original"
-                  checked={evidenceKind === "original"}
-                  onChange={() => setEvidenceKind("original")}
-                />{" "}
-                لغز أو محتوى أصلي
-              </label>
-            </div>
-            {evidenceKind === "factual" ? (
-              <div className="qc-sources">
-                {sources.map((source, index) => (
-                  <div className="qc-source" key={index}>
-                    <div className="qc-source-title">
-                      <strong>
-                        <Link2 size={16} aria-hidden="true" /> المصدر{" "}
-                        {index + 1}
-                      </strong>
-                      {sources.length > 1 && (
-                        <button
-                          type="button"
-                          className="qc-icon-button"
-                          aria-label={`حذف المصدر ${index + 1}`}
-                          onClick={() =>
-                            setSources(sources.filter((_, i) => i !== index))
-                          }
-                        >
-                          <X size={18} aria-hidden="true" />
-                        </button>
-                      )}
-                    </div>
-                    <label htmlFor={`${id}-source-${index}`}>
-                      رابط المصدر
-                      <input
-                        id={`${id}-source-${index}`}
-                        type="url"
-                        dir="ltr"
-                        value={source.url}
-                        onChange={(event) =>
-                          setSources(
-                            sources.map((s, i) =>
-                              i === index
-                                ? { ...s, url: event.target.value }
-                                : s,
-                            ),
-                          )
-                        }
-                        required
-                        pattern="https://.*"
-                        maxLength={2000}
-                        placeholder="https://…"
-                      />
-                    </label>
-                    <label htmlFor={`${id}-citation-${index}`}>
-                      المعلومة أو الفقرة التي تدعم الإجابة
-                      <textarea
-                        id={`${id}-citation-${index}`}
-                        value={source.citation}
-                        onChange={(event) =>
-                          setSources(
-                            sources.map((s, i) =>
-                              i === index
-                                ? { ...s, citation: event.target.value }
-                                : s,
-                            ),
-                          )
-                        }
-                        required
-                        minLength={5}
-                        maxLength={1000}
-                        placeholder="حدّد المعلومة، اسم المرجع، أو رقم الصفحة"
-                      />
-                    </label>
-                  </div>
-                ))}
-                {sources.length < 10 && (
-                  <button
-                    type="button"
-                    className="qc-text-button"
-                    onClick={() =>
-                      setSources([...sources, { url: "", citation: "" }])
-                    }
-                  >
-                    <Plus size={17} aria-hidden="true" /> إضافة مصدر آخر
-                  </button>
-                )}
-              </div>
-            ) : (
-              <label htmlFor={`${id}-fact`}>
-                طريقة التحقّق أو الحلّ
-                <textarea
-                  id={`${id}-fact`}
-                  value={fact}
-                  onChange={(event) => setFact(event.target.value)}
-                  required
-                  minLength={12}
-                  maxLength={1000}
-                  placeholder="اكتب خطوات الحل، الحساب، أو وصفًا يتيح التحقّق من الملف والإجابة"
-                />
-                <small>يظل المحتوى الأصلي بحاجة إلى مراجعة بشرية.</small>
-              </label>
-            )}
-            <label htmlFor={`${id}-provenance`}>
-              ملاحظة عن إعداد السؤال
-              <textarea
-                id={`${id}-provenance`}
-                value={provenance}
-                onChange={(event) => setProvenance(event.target.value)}
-                required
-                minLength={12}
-                maxLength={500}
-                placeholder="كيف أعددت السؤال؟ وما الذي راجعته للتأكد من صحته وأصالته؟"
-              />
             </label>
           </div>
           <details className="qc-extras">
